@@ -60,8 +60,8 @@ MODELS = {
     },
     
     # Paid tier only models
-    "openrouter/google/gemini-2.5-pro": {
-        "aliases": ["google/gemini-2.5-pro"],
+    "gemini/gemini-2.5-pro": {
+        "aliases": ["gemini/gemini-2.5-pro"],
         "pricing": {
             "input_cost_per_million_tokens": 1.25,
             "output_cost_per_million_tokens": 10.00
@@ -108,6 +108,14 @@ MODELS = {
         },
         "tier_availability": ["paid"]
     },   
+    "gemini/gemini-2.5-pro": {
+        "aliases": ["gemini-2.5-pro"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.50,  # TODO: Update with actual Gemini pricing if different
+            "output_cost_per_million_tokens": 1.50
+        },
+        "tier_availability": ["paid"]
+    },
 }
 
 # Derived structures (auto-generated from MODELS)
