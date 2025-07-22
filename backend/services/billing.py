@@ -385,6 +385,11 @@ def calculate_token_cost(prompt_tokens: int, completion_tokens: int, model: str)
                 if resolved_model.startswith('openrouter/google/'):
                     google_model_name = resolved_model.replace('openrouter/', '')
                     models_to_try.append(google_model_name)
+                # Special handling for official Google Gemini
+                if model.startswith('gemini/gemini'):
+                    models_to_try.append(google_model_name)
+                if resolved_model.startswith('gemini/gemini'):
+                    models_to_try.append(google_model_name)
                 
                 # Try each model name variation until we find one that works
                 message_cost = None
