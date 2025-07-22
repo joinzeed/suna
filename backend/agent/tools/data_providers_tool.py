@@ -15,11 +15,11 @@ class DataProvidersTool(Tool):
         super().__init__()
 
         self.register_data_providers = {
-            "linkedin": LinkedinProvider(),
-            "yahoo_finance": YahooFinanceProvider(),
-            "amazon": AmazonProvider(),
-            "zillow": ZillowProvider(),
-            "twitter": TwitterProvider()
+            # "linkedin": LinkedinProvider(),
+            "yahoo_finance": YahooFinanceProvider()
+            # "amazon": AmazonProvider(),
+            # "zillow": ZillowProvider(),
+            # "twitter": TwitterProvider()
         }
 
     @openapi_schema({
@@ -32,7 +32,7 @@ class DataProvidersTool(Tool):
                 "properties": {
                     "service_name": {
                         "type": "string",
-                        "description": "The name of the data provider (e.g., 'linkedin', 'twitter', 'zillow', 'amazon', 'yahoo_finance')"
+                        "description": "The name of the data provider (e.g. 'yahoo_finance')"
                     }
                 },
                 "required": ["service_name"]
@@ -50,10 +50,10 @@ The get-data-provider-endpoints tool returns available endpoints for a specific 
 Use this tool when you need to discover what endpoints are available.
 -->
 
-<!-- Example to get LinkedIn API endpoints -->
+<!-- Example to get yahoo_finance API endpoints -->
 <function_calls>
 <invoke name="get_data_provider_endpoints">
-<parameter name="service_name">linkedin</parameter>
+<parameter name="service_name">yahoo_finance</parameter>
 </invoke>
 </function_calls>
         '''
@@ -66,7 +66,7 @@ Use this tool when you need to discover what endpoints are available.
         Get available endpoints for a specific data provider.
         
         Parameters:
-        - service_name: The name of the data provider (e.g., 'linkedin')
+        - service_name: The name of the data provider (e.g. 'yahoo_finance')
         """
         try:
             if not service_name:
@@ -95,7 +95,7 @@ Use this tool when you need to discover what endpoints are available.
                 "properties": {
                     "service_name": {
                         "type": "string",
-                        "description": "The name of the API service (e.g., 'linkedin')"
+                        "description": "The name of the API service (e.g. 'yahoo_finance')"
                     },
                     "route": {
                         "type": "string",
@@ -124,12 +124,12 @@ Use this tool when you need to discover what endpoints are available.
         The route must be a valid endpoint key obtained from get-data-provider-endpoints tool!!
         -->
         
-        <!-- Example to call linkedIn service with the specific route person -->
+        <!-- Example to call yahoo_finance service with the specific route get_tickers -->
         <function_calls>
         <invoke name="execute_data_provider_call">
-        <parameter name="service_name">linkedin</parameter>
-        <parameter name="route">person</parameter>
-        <parameter name="payload">{"link": "https://www.linkedin.com/in/johndoe/"}</parameter>
+        <parameter name="service_name">yahoo_finance</parameter>
+        <parameter name="route">get_tickers</parameter>
+        <parameter name="payload">{"page": 1, "type": "STOCKS"}</parameter>
         </invoke>
         </function_calls>
         '''

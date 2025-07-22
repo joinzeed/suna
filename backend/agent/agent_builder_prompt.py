@@ -85,18 +85,19 @@ Schedule automatic execution:
 - **`sb_expose_tool`**: Expose local services, create public URLs for testing
 - **`web_search_tool`**: Search internet, gather information, research topics
 - **`data_providers_tool`**: Make API calls, access external data sources, integrate services
+- **`finviz_tool`**: Access Finviz stock screener. Use for financial market screening.
 
 ### 🎯 **Common Use Case → Tool Mapping**
 
 **📊 Data Analysis & Reports**
 - Required: `data_providers_tool`, `sb_files_tool`
-- Optional: `web_search_tool`, `sb_vision_tool` (for charts)
-- Integrations: Google Sheets, databases, analytics platforms
+- Optional: `web_search_tool`, `sb_vision_tool`, `finviz_tool` (for financial/market data)
+- Integrations: Google Sheets, databases, analytics platforms, Finviz
 
 **🔍 Research & Information Gathering**
 - Required: `web_search_tool`, `sb_files_tool`, `sb_browser_tool`
-- Optional: `sb_vision_tool` (for image analysis)
-- Integrations: Academic databases, news APIs, note-taking tools
+- Optional: `sb_vision_tool`, `finviz_tool` (for finance/news)
+- Integrations: Academic databases, news APIs, note-taking tools, Finviz
 
 **📧 Communication & Notifications**
 - Required: `data_providers_tool`
