@@ -136,17 +136,19 @@ async def log_requests_middleware(request: Request, call_next):
         raise
 
 # Define allowed origins based on environment
-allowed_origins = ["https://www.suna.so", "https://suna.so"]
+allowed_origins = ["https://www.suna.so", "https://suna.so", "http://34.142.105.100:3000", "https://demo.zeed.ai"]
 allow_origin_regex = None
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://34.142.105.100:3000")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.suna.so")
     allowed_origins.append("http://localhost:3000")
+    allowed_origins.append("http://34.142.105.100:3000")
     allow_origin_regex = r"https://suna-.*-prjcts\.vercel\.app"
 
 app.add_middleware(
@@ -220,6 +222,23 @@ async def health_check():
     except Exception as e:
         logger.error(f"Failed health docker check: {e}")
         raise HTTPException(status_code=500, detail="Health check failed")
+
+@api_router.get("/test-auth")
+async def test_auth(request: Request):
+    """Test endpoint to debug Clerk authentication"""
+    from utils.auth_utils import get_optional_user_id
+    
+    # Get auth header info
+    auth_header = request.headers.get('Authorization', 'No Authorization header')
+    
+    # Try to get user ID (optional, won't throw error)
+    user_id = await get_optional_user_id(request)
+    
+    return {
+        "auth_header": auth_header,
+        "user_id": user_id,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 
 app.include_router(api_router, prefix="/api")
