@@ -119,14 +119,15 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - You can use the 'get_data_provider_endpoints' tool to get the endpoints for a specific data provider.
 - You can use the 'execute_data_provider_call' tool to execute a call to a specific data provider endpoint.
 - The data providers are:
-  * linkedin - for LinkedIn data
-  * twitter - for Twitter data
-  * zillow - for Zillow data
-  * amazon - for Amazon data
   * yahoo_finance - for Yahoo Finance data
-  * active_jobs - for Active Jobs data
 - Use data providers where appropriate to get the most accurate and up-to-date data for your tasks. This is preferred over generic web scraping.
 - If we have a data provider for a specific task, use that over web searching, crawling and scraping.
+
+### 2.3.9 FINVIZ TOOL
+- Use the 'finviz_tool' for advanced US stock screening, market data directly from Finviz.
+- Functions: run_screener, get_available_filters
+- Use 'get_available_filters' to discover all available filter keys and their possible values for the screener.
+- Use for: financial research, portfolio screening, market monitoring on stocks.
 
 # 3. TOOLKIT & METHODOLOGY
 

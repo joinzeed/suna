@@ -131,6 +131,7 @@ def load_existing_env_vars():
             "OPENROUTER_API_KEY": backend_env.get("OPENROUTER_API_KEY", ""),
             "MORPH_API_KEY": backend_env.get("MORPH_API_KEY", ""),
             "MODEL_TO_USE": backend_env.get("MODEL_TO_USE", ""),
+            "GOOGLE_API_KEY": backend_env.get("GOOGLE_API_KEY", ""),
         },
         "search": {
             "TAVILY_API_KEY": backend_env.get("TAVILY_API_KEY", ""),
@@ -692,6 +693,10 @@ class SetupWizard:
         if not has_existing:
             self.env_vars["llm"] = {}
 
+        # Add Google Gemini support
+        # if "GOOGLE_API_KEY" not in self.env_vars["llm"]:
+        #     self.env_vars["llm"]["GOOGLE_API_KEY"] = ""
+
         while not any(
             k
             for k in self.env_vars["llm"]
@@ -701,9 +706,10 @@ class SetupWizard:
                 "1": ("OpenAI", "OPENAI_API_KEY"),
                 "2": ("Anthropic", "ANTHROPIC_API_KEY"),
                 "3": ("OpenRouter", "OPENROUTER_API_KEY"),
+                "4": ("Google Gemini (official)", "GOOGLE_API_KEY"),
             }
             print(
-                f"\n{Colors.CYAN}Select LLM providers to configure (e.g., 1,3):{Colors.ENDC}"
+                f"\n{Colors.CYAN}Select LLM providers to configure (e.g., 1,3,4):{Colors.ENDC}"
             )
             for key, (name, env_key) in providers.items():
                 current_value = self.env_vars["llm"].get(env_key, "")
@@ -742,16 +748,14 @@ class SetupWizard:
 
         # Set a default model if not already set
         if not self.env_vars["llm"].get("MODEL_TO_USE"):
-            if self.env_vars["llm"].get("OPENAI_API_KEY"):
+            if self.env_vars["llm"].get("GOOGLE_API_KEY"):
+                self.env_vars["llm"]["MODEL_TO_USE"] = "gemini/gemini-2.5-pro"
+            elif self.env_vars["llm"].get("OPENAI_API_KEY"):
                 self.env_vars["llm"]["MODEL_TO_USE"] = "openai/gpt-4o"
             elif self.env_vars["llm"].get("ANTHROPIC_API_KEY"):
-                self.env_vars["llm"][
-                    "MODEL_TO_USE"
-                ] = "anthropic/claude-sonnet-4-20250514"
-            elif self.env_vars["llm"].get("OPENROUTER_API_KEY"):
-                self.env_vars["llm"][
-                    "MODEL_TO_USE"
-                ] = "openrouter/google/gemini-flash-1.5"
+                self.env_vars["llm"]["MODEL_TO_USE"] = "anthropic/claude-sonnet-4-20250514"
+            # elif self.env_vars["llm"].get("OPENROUTER_API_KEY"):
+            #     self.env_vars["llm"]["MODEL_TO_USE"] = "openrouter/google/gemini-flash-1.5"
 
         print_success(
             f"LLM keys saved. Default model: {self.env_vars['llm'].get('MODEL_TO_USE', 'Not set')}"
