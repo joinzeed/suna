@@ -185,6 +185,8 @@ class Configuration:
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_REGION_NAME: Optional[str] = None
+    CAMPAIGN_MANAGEMENT_LAMBDA_FUNCTION_NAME: Optional[str] = None
+    SQS_QUEUE_URL: Optional[str] = None
     
     # Model configuration
     MODEL_TO_USE: Optional[str] = "anthropic/claude-sonnet-4-20250514"
@@ -239,11 +241,18 @@ class Configuration:
     FINVIZ_ELITE_EMAIL: Optional[str] = None
     FINVIZ_ELITE_PASSWORD: Optional[str] = None
     
-    # Campaign management Lambda URL
-    CAMPAIGN_MANAGEMENT_LAMBDA_URL: str = os.environ.get(
-        "CAMPAIGN_MANAGEMENT_LAMBDA_URL",
-        "https://ramdrbygbyxwgcrckkjhvmcokq0sddyv.lambda-url.eu-west-2.on.aws/"
-    )
+    # AWS configuration
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION_NAME: Optional[str] = None
+    CAMPAIGN_MANAGEMENT_LAMBDA_FUNCTION_NAME: Optional[str] = None
+    SQS_QUEUE_URL: Optional[str] = None
+    
+    
+    # Job Supabase configuration
+    JOB_SUPABASE_URL: Optional[str] = None
+    JOB_SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    
     
     @property
     def STRIPE_PRODUCT_ID(self) -> str:
