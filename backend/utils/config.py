@@ -239,6 +239,12 @@ class Configuration:
     FINVIZ_ELITE_EMAIL: Optional[str] = None
     FINVIZ_ELITE_PASSWORD: Optional[str] = None
     
+    # Campaign management Lambda URL
+    CAMPAIGN_MANAGEMENT_LAMBDA_URL: str = os.environ.get(
+        "CAMPAIGN_MANAGEMENT_LAMBDA_URL",
+        "https://ramdrbygbyxwgcrckkjhvmcokq0sddyv.lambda-url.eu-west-2.on.aws/"
+    )
+    
     @property
     def STRIPE_PRODUCT_ID(self) -> str:
         if self.ENV_MODE == EnvMode.STAGING:

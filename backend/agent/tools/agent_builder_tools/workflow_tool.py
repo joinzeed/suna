@@ -47,7 +47,8 @@ class WorkflowTool(AgentBuilderBaseTool):
                 'sb_expose_tool': ['expose_port'],
                 'web_search_tool': ['web_search'],
                 'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
-                'finviz_tool': ['run_screener', 'get_available_filters']
+                'finviz_tool': ['run_screener', 'get_available_filters'],
+                'campaign_management_tool': ['campaign_build', 'campaign_remove']
             }
             
             agentpress_tools = agent_config.get('agentpress_tools', {})
