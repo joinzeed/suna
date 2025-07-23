@@ -32,6 +32,7 @@ from agent.gemini_prompt import get_gemini_system_prompt
 from agent.tools.mcp_tool_wrapper import MCPToolWrapper
 from agentpress.tool import SchemaType
 from agent.tools.finviz_tool import SandboxFinvizTool
+from agent.tools.campaign_management_tool import CampaignManagementTool
 
 load_dotenv()
 
@@ -144,6 +145,7 @@ async def run_agent(
         thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
         if config.RAPID_API_KEY:
             thread_manager.add_tool(DataProvidersTool)
+        thread_manager.add_tool(CampaignManagementTool)
     else:
         logger.info("Custom agent specified - registering only enabled tools")
         thread_manager.add_tool(ExpandMessageTool, thread_id=thread_id, thread_manager=thread_manager)

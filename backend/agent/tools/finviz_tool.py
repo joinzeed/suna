@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import Dict, Any, Optional, List, Tuple
-import requests
+import httpx
 from urllib.parse import urlencode
 from bs4 import BeautifulSoup
 import re
@@ -17,15 +17,19 @@ class FinvizClient:
         self.email = email
         self.password = password
         self.use_elite = use_elite
-        self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0"
-        })
+        self.session = None  # Will be an httpx.AsyncClient
         self.is_logged_in = False
         self.logger = logging.getLogger("finviz_client")
         self.page_row_number = page_row_number
 
-    def login(self) -> bool:
+    async def _get_session(self):
+        if self.session is None:
+            self.session = httpx.AsyncClient(headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0"
+            })
+        return self.session
+
+    async def login(self) -> bool:
         if not self.use_elite:
             return True
         if not self.email or not self.password:
@@ -33,17 +37,18 @@ class FinvizClient:
             return False
         login_data = {"email": self.email, "password": self.password}
         try:
-            response = self.session.post(
+            session = await self._get_session()
+            response = await session.post(
                 "https://finviz.com/login_submit.ashx",
                 data=login_data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
-                allow_redirects=True
+                follow_redirects=True
             )
             if response.status_code != 200:
                 self.logger.error(
                     f"Login failed with status code: {response.status_code}")
                 return False
-            if "elite.finviz.com" not in response.url:
+            if "elite.finviz.com" not in str(response.url):
                 self.logger.error(
                     f"Login failed - redirected to {response.url} instead of elite.finviz.com")
                 return False
@@ -54,9 +59,10 @@ class FinvizClient:
             self.logger.error(f"Login exception: {str(e)}")
             return False
 
-    def fetch_page(self, url: str) -> Optional[str]:
+    async def fetch_page(self, url: str) -> Optional[str]:
         try:
-            response = self.session.get(url)
+            session = await self._get_session()
+            response = await session.get(url)
             if response.status_code != 200:
                 self.logger.error(
                     f"Failed to fetch page: {url}, status code: {response.status_code}")
@@ -66,9 +72,9 @@ class FinvizClient:
             self.logger.error(f"Exception fetching page {url}: {str(e)}")
             return None
 
-    def fetch_table(self, params: Dict[str, Any], fetch_all_pages: bool = False) -> Optional[Dict[str, Any]]:
+    async def fetch_table(self, params: Dict[str, Any], fetch_all_pages: bool = False) -> Optional[Dict[str, Any]]:
         if self.use_elite and not self.is_logged_in:
-            login_successful = self.login()
+            login_successful = await self.login()
             if not login_successful:
                 self.logger.error("Not logged in and login attempt failed")
                 return None
@@ -84,7 +90,7 @@ class FinvizClient:
         uri = table_params.build_uri()
         base_url = "https://elite.finviz.com/screener.ashx" if self.use_elite else "https://finviz.com/screener.ashx"
         url = f"{base_url}?{uri}"
-        html_content = self.fetch_page(url)
+        html_content = await self.fetch_page(url)
         if not html_content:
             return None
         table = parse_table(html_content, self.page_row_number)
@@ -102,7 +108,7 @@ class FinvizClient:
                 table_params.page = page
                 next_uri = table_params.build_uri()
                 next_url = f"{base_url}?{next_uri}"
-                next_html_content = self.fetch_page(next_url)
+                next_html_content = await self.fetch_page(next_url)
                 if not next_html_content:
                     break
                 next_table = parse_table(
@@ -118,16 +124,17 @@ class FinvizClient:
                 result["pagination"]["current_page"] = last_page_fetched
         return result
 
-    def fetch_futures(self) -> Optional[Dict[str, Any]]:
+    async def fetch_futures(self) -> Optional[Dict[str, Any]]:
         if self.use_elite and not self.is_logged_in:
-            login_successful = self.login()
+            login_successful = await self.login()
             if not login_successful:
                 self.logger.error("Not logged in and login attempt failed")
                 return None
         base_url = "https://elite.finviz.com" if self.use_elite else "https://finviz.com"
         url = f"{base_url}/api/futures_all.ashx?timeframe=NO"
         try:
-            response = self.session.get(url)
+            session = await self._get_session()
+            response = await session.get(url)
             if response.status_code != 200:
                 self.logger.error(
                     f"Failed to fetch futures: status code {response.status_code}")
@@ -137,15 +144,15 @@ class FinvizClient:
             self.logger.error(f"Exception fetching futures: {str(e)}")
             return None
 
-    def fetch_news_and_blogs(self) -> Tuple[Optional[List[Dict[str, str]]], Optional[List[Dict[str, str]]]]:
+    async def fetch_news_and_blogs(self) -> Tuple[Optional[List[Dict[str, str]]], Optional[List[Dict[str, str]]]]:
         if self.use_elite and not self.is_logged_in:
-            login_successful = self.login()
+            login_successful = await self.login()
             if not login_successful:
                 self.logger.error("Not logged in and login attempt failed")
                 return None, None
         base_url = "https://elite.finviz.com" if self.use_elite else "https://finviz.com"
         url = f"{base_url}/news.ashx"
-        html_content = self.fetch_page(url)
+        html_content = await self.fetch_page(url)
         if not html_content:
             return None, None
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -389,7 +396,7 @@ class SandboxFinvizTool(SandboxToolsBase):
     )
     async def run_screener(self, params: Dict[str, Any], fetch_all_pages: bool = False) -> ToolResult:
         try:
-            result = self.client.fetch_table(
+            result = await self.client.fetch_table(
                 params, fetch_all_pages=fetch_all_pages)
             print('result result result', result)
             if not result:

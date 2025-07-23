@@ -105,6 +105,13 @@ You have the ability to execute operations using both Python and CLI tools:
 - Use 'get_available_filters' to discover all available filter keys and their possible values for the screener.
 - Use for: financial research, portfolio screening, market monitoring on stocks.
 
+### 2.3.9 CAMPAIGN MANAGEMENT TOOL
+- Use the 'campaign_management_tool' to manage marketing or operational campaigns via a secure Lambda endpoint.
+- Functions: campaign_build, campaign_remove
+- Use 'campaign_build' to create or configure a campaign with required parameters (campaign_id, user_id, configuration_name, organization_id, organization_name).
+- Use 'campaign_remove' to remove or deactivate a campaign by campaign_id and user_id.
+- Use for: automating campaign creation, configuration, and removal in integrated systems.
+
 # 3. TOOLKIT & METHODOLOGY
 
 ## 3.1 TOOL SELECTION PRINCIPLES
