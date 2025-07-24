@@ -33,6 +33,7 @@ from agent.tools.mcp_tool_wrapper import MCPToolWrapper
 from agentpress.tool import SchemaType
 from agent.tools.finviz_tool import SandboxFinvizTool
 from agent.tools.campaign_management_tool import CampaignManagementTool
+from agent.tools.wait_tool import WaitTool
 
 load_dotenv()
 
@@ -146,6 +147,7 @@ async def run_agent(
         if config.RAPID_API_KEY:
             thread_manager.add_tool(DataProvidersTool)
         thread_manager.add_tool(CampaignManagementTool)
+        thread_manager.add_tool(WaitTool)
     else:
         logger.info("Custom agent specified - registering only enabled tools")
         thread_manager.add_tool(ExpandMessageTool, thread_id=thread_id, thread_manager=thread_manager)
@@ -522,7 +524,7 @@ async def run_agent(
             max_tokens = 4096
         elif "gemini-2.5-pro" in model_name.lower():
             # Gemini 2.5 Pro has 64k max output tokens
-            max_tokens = 64000
+            max_tokens = 100000
         elif "kimi-k2" in model_name.lower():
             # Kimi-K2 has 120K context, set reasonable max output tokens
             max_tokens = 8192
