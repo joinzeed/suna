@@ -1,9 +1,21 @@
-FROM ghcr.io/astral-sh/uv:python3.11-alpine
+# Switch from Alpine to Debian-based image for Cursor compatibility
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm
 
 ENV ENV_MODE production
 WORKDIR /app
 
-RUN apk add --no-cache curl git
+# Install system dependencies including bash and development tools
+RUN apt-get update && apt-get install -y \
+    bash \
+    curl \
+    git \
+    wget \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set bash as default shell for better dev container compatibility
+SHELL ["/bin/bash", "-c"]
+ENV SHELL=/bin/bash
 
 # Install Python dependencies
 COPY pyproject.toml uv.lock ./
@@ -22,8 +34,8 @@ ENV WORKER_CONNECTIONS=2000
 ENV PYTHONPATH=/app
 EXPOSE 8000
 
-# Gunicorn configuration
-CMD ["sh", "-c", "uv run gunicorn api:app \
+# Gunicorn configuration with bash for better compatibility
+CMD ["bash", "-c", "uv run gunicorn api:app \
   --workers $WORKERS \
   --worker-class uvicorn.workers.UvicornWorker \
   --bind 0.0.0.0:8000 \
