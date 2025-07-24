@@ -1,6 +1,6 @@
 import aioboto3
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Union
 from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
 from utils.config import config
 import uuid
@@ -464,4 +464,58 @@ class CampaignManagementTool(Tool):
                 result = json.loads(result_payload)
                 return self.success_response(result)
         except Exception as e:
-            return self.fail_response(f"Error calling remove_batch via Lambda SDK: {str(e)}") 
+            return self.fail_response(f"Error calling remove_batch via Lambda SDK: {str(e)}")
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "get_job_status",
+            "description": "Get the status of one or more jobs from the content_jobs table.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "content_ids": {
+                        "type": "array",
+                        "description": "A list of content job IDs to check.",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": ["content_ids"]
+            }
+        }
+    })
+    @xml_schema(
+        tag_name="get-job-status",
+        mappings=[
+            {"param_name": "content_ids", "node_type": "attribute", "path": "."}
+        ],
+        example='''
+        <function_calls>
+        <invoke name="get_job_status">
+        <parameter name="content_ids">["your-content-id-1", "your-content-id-2"]</parameter>
+        </invoke>
+        </function_calls>
+        '''
+    )
+    async def get_job_status(self, content_ids: Union[str, List[str]]) -> ToolResult:
+        """
+        Retrieves the status of one or more jobs from the content_jobs table.
+        Args:
+            content_ids (Union[str, List[str]]): A single content ID or a list of content IDs to check.
+        Returns:
+            ToolResult: The result of the operation.
+        """
+        if isinstance(content_ids, str):
+            content_ids = [content_ids]
+
+        try:
+            supabase = await create_async_client(config.JOB_SUPABASE_URL, config.JOB_SUPABASE_SERVICE_ROLE_KEY)
+            response = await supabase.table('content_jobs').select('content_id, status').in_('content_id', content_ids).execute()
+            if response.data:
+                return self.success_response(response.data)
+            else:
+                return self.fail_response(f"No jobs found with the provided content_ids.")
+        except Exception as e:
+            return self.fail_response(f"Failed to get job status: {str(e)}") 
