@@ -48,7 +48,7 @@ class WorkflowTool(AgentBuilderBaseTool):
                 'web_search_tool': ['web_search'],
                 'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
                 'finviz_tool': ['run_screener', 'get_available_filters'],
-                'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_preliminary_job', 'get_job_status'],
+                'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_preliminary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch'],
                 'wait_tool': ['wait']
             }
             

@@ -3,12 +3,8 @@
   "dockerComposeFile": "../docker-compose.yaml",
   "service": "backend",
   "workspaceFolder": "/app",
-  "shutdownAction": "stopCompose",
   
-  "postCreateCommand": [
-    "bash", "-c",
-    "echo 'Backend development environment ready!' && echo 'Python version:' && python --version && echo 'UV version:' && uv --version"
-  ],
+  "postCreateCommand": "echo 'Backend development ready!'",
   
   "remoteUser": "root",
   
@@ -17,56 +13,18 @@
       "extensions": [
         "ms-python.python",
         "ms-python.black-formatter",
-        "ms-python.isort",
-        "ms-python.pylint",
-        "ms-vscode.vscode-json",
-        "redhat.vscode-yaml"
+        "ms-python.isort"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/app/.venv/bin/python",
-        "python.terminal.activateEnvironment": true,
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "terminal.integrated.shell.linux": "/bin/bash",
-        "files.watcherExclude": {
-          "**/.venv/**": true,
-          "**/node_modules/**": true
-        }
+        "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
   },
   
-  // Only backend-related ports (no frontend port 3000)
-  "forwardPorts": [
-    8000,  // Backend API
-    6379,  // Redis
-    5672,  // RabbitMQ AMQP
-    15672  // RabbitMQ Management UI
-  ],
-  
-  "portsAttributes": {
-    "8000": {
-      "label": "Backend API",
-      "onAutoForward": "notify"
-    },
-    "6379": {
-      "label": "Redis"
-    },
-    "5672": {
-      "label": "RabbitMQ AMQP"
-    },
-    "15672": {
-      "label": "RabbitMQ Management UI",
-      "onAutoForward": "openBrowser"
-    }
-  },
+  "forwardPorts": [8000, 6379, 5672, 15672],
   
   "containerEnv": {
-    "SHELL": "/bin/bash",
-    "ENV_MODE": "development"
-  },
-  
-  "remoteEnv": {
-    "SHELL": "/bin/bash",
-    "TERM": "xterm-256color"
+    "SHELL": "/bin/bash"
   }
 }
