@@ -5,34 +5,68 @@
   "workspaceFolder": "/app",
   "shutdownAction": "stopCompose",
   
-  // Install required packages for Alpine Linux + Cursor support  
-  "postCreateCommand": "apk add --no-cache bash wget curl || true",
+  "postCreateCommand": [
+    "bash", "-c",
+    "echo 'Backend development environment ready!' && echo 'Python version:' && python --version && echo 'UV version:' && uv --version"
+  ],
   
-  // Alternative: Install during container startup (more reliable)
-  "initializeCommand": "docker exec $(docker ps -q --filter label=com.docker.compose.service=backend) apk add --no-cache bash wget curl || true",
-  
-  // Set user to root for Alpine compatibility
   "remoteUser": "root",
   
-  // Ensure proper shell
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
         "ms-python.black-formatter",
-        "ms-python.isort"
+        "ms-python.isort",
+        "ms-python.pylint",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml"
       ],
       "settings": {
         "python.defaultInterpreterPath": "/app/.venv/bin/python",
-        "terminal.integrated.defaultProfile.linux": "bash"
+        "python.terminal.activateEnvironment": true,
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "files.watcherExclude": {
+          "**/.venv/**": true,
+          "**/node_modules/**": true
+        }
       }
     }
   },
   
-  "forwardPorts": [8000, 6379, 5672, 15672],
+  // Only backend-related ports (no frontend port 3000)
+  "forwardPorts": [
+    8000,  // Backend API
+    6379,  // Redis
+    5672,  // RabbitMQ AMQP
+    15672  // RabbitMQ Management UI
+  ],
   
-  // Additional Alpine-specific settings
+  "portsAttributes": {
+    "8000": {
+      "label": "Backend API",
+      "onAutoForward": "notify"
+    },
+    "6379": {
+      "label": "Redis"
+    },
+    "5672": {
+      "label": "RabbitMQ AMQP"
+    },
+    "15672": {
+      "label": "RabbitMQ Management UI",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  
   "containerEnv": {
-    "SHELL": "/bin/bash"
+    "SHELL": "/bin/bash",
+    "ENV_MODE": "development"
+  },
+  
+  "remoteEnv": {
+    "SHELL": "/bin/bash",
+    "TERM": "xterm-256color"
   }
 }
