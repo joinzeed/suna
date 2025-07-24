@@ -318,7 +318,7 @@ async def make_llm_api_call(
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
     logger.info(f"📡 API Call: Using model {model_name}")
-
+    print("99999999999999")
     params = prepare_params(
         messages=messages,
         model_name=model_name,
@@ -336,6 +336,7 @@ async def make_llm_api_call(
         reasoning_effort=reasoning_effort
     )
     print("121212121", params)
+    print("jjdkdjkad")
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
@@ -343,6 +344,8 @@ async def make_llm_api_call(
             # logger.debug(f"API request parameters: {json.dumps(params, indent=2)}")
 
             response = await litellm.acompletion(**params)
+            print('popopopopo')
+            print("999999", response)
             logger.debug(f"Successfully received API response from {model_name}")
             # logger.debug(f"Response: {response}")
             return response
