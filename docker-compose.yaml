@@ -29,16 +29,15 @@ services:
       start_period: 10s
 
   backend:
-    image: ghcr.io/suna-ai/suna-backend:latest
-    platform: linux/amd64
     build:
       context: ./backend
       dockerfile: Dockerfile
+    platform: linux/amd64
     ports:
       - "8000:8000"
     volumes:
-      - ./backend:/app                    # 挂载代码目录实现实时同步
-      - /app/.venv                        # 保护虚拟环境不被覆盖
+      - ./backend:/app:cached
+      - backend_venv:/app/.venv
       - ./backend/.env:/app/.env:ro
     env_file:
       - ./backend/.env
@@ -49,7 +48,6 @@ services:
       - REDIS_SSL=False
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
-    # command: uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     depends_on:
       redis:
         condition: service_healthy
@@ -57,15 +55,14 @@ services:
         condition: service_healthy
 
   worker:
-    image: ghcr.io/suna-ai/suna-backend:latest
-    platform: linux/amd64
     build:
       context: ./backend
       dockerfile: Dockerfile
+    platform: linux/amd64
     command: uv run dramatiq --skip-logging --processes 4 --threads 4 run_agent_background
     volumes:
-      - ./backend:/app                    # 挂载代码目录
-      - /app/.venv                        # 保护虚拟环境
+      - ./backend:/app:cached
+      - backend_venv:/app/.venv
       - ./backend/.env:/app/.env:ro
     env_file:
       - ./backend/.env
@@ -85,3 +82,4 @@ services:
 volumes:
   redis_data:
   rabbitmq_data:
+  backend_venv:
