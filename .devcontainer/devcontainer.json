@@ -1,0 +1,38 @@
+{
+  "name": "Suna Backend Development",
+  "dockerComposeFile": "../docker-compose.yaml",
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+  
+  // Install required packages for Alpine Linux + Cursor support  
+  "postCreateCommand": "apk add --no-cache bash wget curl || true",
+  
+  // Alternative: Install during container startup (more reliable)
+  "initializeCommand": "docker exec $(docker ps -q --filter label=com.docker.compose.service=backend) apk add --no-cache bash wget curl || true",
+  
+  // Set user to root for Alpine compatibility
+  "remoteUser": "root",
+  
+  // Ensure proper shell
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.isort"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/app/.venv/bin/python",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  
+  "forwardPorts": [8000, 6379, 5672, 15672],
+  
+  // Additional Alpine-specific settings
+  "containerEnv": {
+    "SHELL": "/bin/bash"
+  }
+}

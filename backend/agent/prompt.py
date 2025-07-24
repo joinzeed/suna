@@ -136,6 +136,21 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - Use 'campaign_remove' to remove or deactivate a campaign by campaign_id and user_id.
 - Use for: automating campaign creation, configuration, and removal in integrated systems.
 
+### 2.3.11 JOB TRACKING
+- To submit and track jobs, you must follow a two-step process:
+  1. **Submit the job:** Use the `send_preliminary_job` tool to submit the job and get a `content_id`.
+  2. **Track the job status:** Use the `get_job_status` tool with the `content_id` to check the job's status.
+- **Polling for Status:**
+  - If the job status is `processing`, you must wait for a short period (e.g., 10 seconds) using the `wait` tool before checking the status again.
+  - You can check the status of multiple jobs at once by passing a list of `content_id`s to the `get_job_status` tool.
+  - Continue this loop of checking the status and waiting until the status is `completed` or `failed` for all jobs.
+- **IMPORTANT**: Do not remove the batch after the jobs are complete unless explicitly instructed to do so.
+- **Example Workflow:**
+  1. Call `send_preliminary_job` to get the `content_id`.
+  2. Call `get_job_status` with the `content_id`.
+  3. If the status is `processing`, call `wait(seconds=10)`.
+  4. Repeat steps 2 and 3 until the status is `completed` or `failed`.
+
 # 3. TOOLKIT & METHODOLOGY
 
 ## 3.1 TOOL SELECTION PRINCIPLES
