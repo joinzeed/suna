@@ -187,6 +187,7 @@ class Configuration:
     AWS_REGION_NAME: Optional[str] = None
     CAMPAIGN_MANAGEMENT_LAMBDA_FUNCTION_NAME: Optional[str] = None
     SQS_QUEUE_URL: Optional[str] = None
+    DEEP_RESEARCH_QUEUE_URL: Optional[str] = None
     
     # Model configuration
     MODEL_TO_USE: Optional[str] = "anthropic/claude-sonnet-4-20250514"
