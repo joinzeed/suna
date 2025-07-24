@@ -6,6 +6,7 @@ from utils.config import config
 import uuid
 import datetime
 from supabase import create_async_client
+from utils.logger import logger
 
 class CampaignManagementTool(Tool):
     """Tool for managing campaigns via AWS Lambda SDK (aioboto3)."""
@@ -335,6 +336,135 @@ class CampaignManagementTool(Tool):
     @openapi_schema({
         "type": "function",
         "function": {
+            "name": "send_deep_research_job",
+            "description": "Submit a batch of deep research jobs to SQS. Requires a list of selections and a batch_id.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "selections": {
+                        "type": "array",
+                        "description": "List of selection dictionaries containing content_id, follow_up_queries, and optional sqs_message and preliminary_research_result.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "content_id": {"type": "string", "description": "The content_id of the job to follow up on."},
+                                "follow_up_queries": {"type": "array", "description": "List of follow-up queries to send to the deep research queue.", "items": {"type": "string"}},
+                                "sqs_message": {"type": "object", "description": "Original SQS message for the job (optional)."},
+                                "preliminary_research_result": {"type": "object", "description": "Preliminary research result for the job (optional)."}
+                            },
+                            "required": ["content_id", "follow_up_queries", "sqs_message", "preliminary_research_result"]
+                        }
+                    },
+                    "batch_id": {"type": "string", "description": "Batch identifier for grouping messages."}
+                },
+                "required": ["selections", "batch_id"]
+            }
+        }
+    })
+    @xml_schema(
+        tag_name="send-deep-research-job",
+        mappings=[
+            {"param_name": "selections", "node_type": "content", "path": "."},
+            {"param_name": "batch_id", "node_type": "attribute", "path": "."}
+        ],
+        example='''
+        <function_calls>
+        <invoke name="send_deep_research_job">
+        <parameter name="selections">[{"content_id": "your-content-id-1", "follow_up_queries": ["query1", "query2"], "sqs_message": {"example": "value"}, "preliminary_research_result": {"example": "value"}}, {"content_id": "your-content-id-2", "follow_up_queries": ["query3"]}]</parameter>
+        <parameter name="batch_id">batch-123</parameter>
+        </invoke>
+        </function_calls>
+        '''
+    )
+    async def send_deep_research_job(self, selections, batch_id):
+        """
+        Submits deep research jobs for a list of selections using batch operations to SQS.
+        Args:
+            selections (list): List of selection dictionaries containing content_id and follow_up_queries
+            batch_id (str): Batch identifier for grouping messages
+        Returns:
+            dict: Results containing successful and failed jobs
+        """
+        # SQS setup
+        sqs_queue_url = getattr(config, 'SQS_QUEUE_URL', None)
+        if not sqs_queue_url:
+            return self.fail_response("SQS_QUEUE_URL not configured in config.")
+        is_fifo_queue = sqs_queue_url.endswith('.fifo')
+        chunk_size = 10
+        successful_jobs = []
+        failed_jobs = []
+        async with self.session.client(
+            'sqs',
+            aws_access_key_id=self.aws_access_key_id,
+            aws_secret_access_key=self.aws_secret_access_key,
+            region_name=self.aws_region_name
+        ) as sqs:
+            for i in range(0, len(selections), chunk_size):
+                selection_chunk = selections[i:i+chunk_size]
+                sqs_entries = []
+                for selection in selection_chunk:
+                    # Validate all required fields are present and not None
+                    required_fields = ['content_id', 'follow_up_queries', 'sqs_message', 'preliminary_research_result']
+                    missing_or_none = [field for field in required_fields if field not in selection or selection[field] is None]
+                    if missing_or_none:
+                        failed_jobs.append({
+                            "content_id": selection.get('content_id', 'unknown'),
+                            "error": f"Missing or None fields: {', '.join(missing_or_none)}"
+                        })
+                        continue
+                    try:
+                        job_id = selection['content_id']
+                        message_id = str(uuid.uuid4())
+                        entry = {
+                            'Id': job_id,
+                            'MessageBody': json.dumps({
+                                'jobId': job_id,
+                                'batchId': batch_id,
+                                'followUpQueries': selection['follow_up_queries'],
+                                'originalMessage': selection['sqs_message'],
+                                'preliminaryResearchResult': selection['preliminary_research_result']
+                            })
+                        }
+                        if is_fifo_queue:
+                            entry['MessageGroupId'] = batch_id
+                            entry['MessageDeduplicationId'] = message_id
+                        sqs_entries.append(entry)
+                        successful_jobs.append(job_id)
+                    except Exception as e:
+                        logger.error(f"Error preparing selection {selection.get('content_id', 'unknown')}: {str(e)}")
+                        failed_jobs.append({"content_id": selection.get('content_id', 'unknown'), "error": str(e)})
+                logger.info(f"Deep research job batch {batch_id} submitted with {len(sqs_entries)} jobs: {sqs_entries}")
+                if sqs_entries:
+                    try:
+                        response = await sqs.send_message_batch(
+                            QueueUrl=sqs_queue_url,
+                            Entries=sqs_entries
+                        )
+                        if 'Failed' in response and response['Failed']:
+                            for failed in response['Failed']:
+                                failed_id = failed['Id']
+                                message_body = next((json.loads(entry['MessageBody']) for entry in sqs_entries if entry['Id'] == failed_id), {})
+                                content_id = message_body.get('jobId', failed_id)
+                                logger.error(f"Failed to send message for content_id {content_id}: {failed.get('Message')}")
+                                failed_jobs.append({"content_id": content_id, "error": failed.get('Message')})
+                                if failed_id in successful_jobs:
+                                    successful_jobs.remove(failed_id)
+                    except Exception as e:
+                        logger.error(f"Error sending batch to SQS: {str(e)}")
+                        for entry in sqs_entries:
+                            message_body = json.loads(entry['MessageBody'])
+                            content_id = message_body['jobId']
+                            failed_jobs.append({"content_id": content_id, "error": f"SQS send failed: {str(e)}"})
+                            if entry['Id'] in successful_jobs:
+                                successful_jobs.remove(entry['Id'])
+        return {
+            "successful_jobs": successful_jobs,
+            "failed_jobs": failed_jobs
+        }
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
             "name": "build_batch",
             "description": "Build a batch via Lambda. Requires batch_id, user_id, campaign_id, config_id, and select_all.",
             "parameters": {
@@ -512,7 +642,7 @@ class CampaignManagementTool(Tool):
 
         try:
             supabase = await create_async_client(config.JOB_SUPABASE_URL, config.JOB_SUPABASE_SERVICE_ROLE_KEY)
-            response = await supabase.table('content_jobs').select('content_id, status').in_('content_id', content_ids).execute()
+            response = await supabase.table('content_jobs').select('*').in_('content_id', content_ids).execute()
             if response.data:
                 return self.success_response(response.data)
             else:

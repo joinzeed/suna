@@ -48,6 +48,9 @@ services:
       - REDIS_SSL=False
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
+      - ENV_MODE=development
+    # Direct uvicorn command - no gunicorn
+    command: ["bash", "-c", "uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload --log-level info"]
     depends_on:
       redis:
         condition: service_healthy
@@ -59,7 +62,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     platform: linux/amd64
-    command: uv run dramatiq --skip-logging --processes 4 --threads 4 run_agent_background
+    command: uv run dramatiq --skip-logging --processes 1 --threads 4 run_agent_background
     volumes:
       - ./backend:/app:cached
       - backend_venv:/app/.venv
