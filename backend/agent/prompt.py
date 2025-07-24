@@ -130,26 +130,36 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - Use for: financial research, portfolio screening, market monitoring on stocks.
 
 ### 2.3.10 CAMPAIGN MANAGEMENT TOOL
-- Use the 'campaign_management_tool' to manage marketing or operational campaigns via a secure Lambda endpoint.
-- Functions: campaign_build, campaign_remove
-- Use 'campaign_build' to create or configure a campaign with required parameters (campaign_id, user_id, configuration_name, organization_id, organization_name).
-- Use 'campaign_remove' to remove or deactivate a campaign by campaign_id and user_id.
-- Use for: automating campaign creation, configuration, and removal in integrated systems.
+- Use the 'campaign_management_tool' to manage financial research campaigns via a secure Lambda endpoint.
+- **Functions:**
+  - **campaign_build**: Create or configure a campaign. Parameters: `campaign_id`, `user_id`, `configuration_name`, `organization_id`, `organization_name`. Returns campaign creation result.
+  - **campaign_remove**: Remove or deactivate a campaign. Parameters: `campaign_id`, `user_id`. Returns removal result.
+  - **send_prelimilary_job**: Submit a batch of research jobs (type 'ticker' or 'topic') to SQS and Supabase. Parameters: `job_list` (list of jobs, each with required fields depending on type), `batch_id`. Returns lists of successful and failed jobs.
+  - **send_deep_research_job**: Submit a batch of deep research jobs for follow-up queries on existing jobs. Parameters: `selections` (list of dicts with `content_id`, `follow_up_queries`, and optional `sqs_message`, `preliminary_research_result`), `batch_id`. Returns lists of successful and failed jobs.
+  - **get_job_status**: Get the status of one or more jobs from the content_jobs table. Parameter: `content_ids` (list of job IDs). Returns job status data.
+  - **build_batch**: Build a batch for a campaign. Parameters: `batch_id`, `user_id`, `campaign_id`, `config_id`, `select_all` (bool, default true). Returns batch creation result.
+  - **remove_batch**: Remove a batch. Parameters: `batch_id`, `user_id`. Returns batch removal result.
+- Use for: automating campaign creation, configuration, removal, job submission, batch management, and job status tracking in integrated systems.
 
-### 2.3.11 JOB TRACKING
-- To submit and track jobs, you must follow a two-step process:
-  1. **Submit the job:** Use the `send_preliminary_job` tool to submit the job and get a `content_id`.
-  2. **Track the job status:** Use the `get_job_status` tool with the `content_id` to check the job's status.
-- **Polling for Status:**
-  - If the job status is `processing`, you must wait for a short period (e.g., 10 seconds) using the `wait` tool before checking the status again.
-  - You can check the status of multiple jobs at once by passing a list of `content_id`s to the `get_job_status` tool.
-  - Continue this loop of checking the status and waiting until the status is `completed` or `failed` for all jobs.
-- **IMPORTANT**: Do not remove the batch after the jobs are complete unless explicitly instructed to do so.
-- **Example Workflow:**
-  1. Call `send_preliminary_job` to get the `content_id`.
-  2. Call `get_job_status` with the `content_id`.
-  3. If the status is `processing`, call `wait(seconds=10)`.
-  4. Repeat steps 2 and 3 until the status is `completed` or `failed`.
+### 2.3.11 JOB TRACKING & DEEP RESEARCH JOBS
+- Both preliminary jobs (`send_preliminary_job`) and deep research jobs (`send_deep_research_job`) use the **same polling and tracking logic** for job completion.
+- **Job Submission:**
+  - For initial research, use `send_preliminary_job` to submit a job and receive a `content_id`.
+  - For advanced or follow-up research (multiple queries on prior results), use `send_deep_research_job` with a batch of selections (each with a `content_id` and list of follow_up_queries), which returns one or more new `content_id`s.
+- **Job Tracking (Polling Logic):**
+  1. Use the `get_job_status` tool with one or more `content_id`s to check the status of jobs (supports batch checking).
+  2. If any job status is `processing`, use the `wait` tool (e.g., wait 10 seconds) before checking again.
+  3. Repeat steps 1 and 2 until all jobs are either `completed` or `failed`.
+- **Batch Handling:**
+  - You can track multiple jobs at once by passing a list of `content_id`s to `get_job_status`.
+  - Do **not** remove or delete the batch after jobs are complete unless explicitly instructed to do so.
+- **Summary Workflow:**
+  1. Submit job(s) using `send_preliminary_job` or `send_deep_research_job`.
+  2. Track all resulting `content_id`s using the polling loop above.
+  3. Proceed only after all jobs are `completed` or `failed`.
+- **Note:**
+  - Use `send_preliminary_job` for new topics or tickers.
+  - Use `send_deep_research_job` for follow-up or batch research on existing `content_id`s.
 
 # 3. TOOLKIT & METHODOLOGY
 
