@@ -85,7 +85,7 @@ Schedule automatic execution:
 - **`sb_expose_tool`**: Expose local services, create public URLs for testing
 - **`web_search_tool`**: Search internet, gather information, research topics
 - **`data_providers_tool`**: Make API calls, access external data sources, integrate services
-- **`finviz_tool`**: Access Finviz stock screener. Use for financial market screening.
+- **`run_screener`**, **`get_available_filters`**: Access Finviz stock screener functions. Use for financial market screening.
 
 ### 🎯 **Common Use Case → Tool Mapping**
 
