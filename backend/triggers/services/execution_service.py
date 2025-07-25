@@ -646,7 +646,7 @@ class WorkflowPromptBuilder:
         agentpress_tools = agent_config.get('agentpress_tools', {})
         tool_mapping = {
                 'sb_shell_tool': ['execute_command'],
-                'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file'],
+                'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file', 'copy_supabase_field_to_file'],
                 'sb_browser_tool': ['browser_navigate_to', 'browser_take_screenshot'],
                 'sb_vision_tool': ['see_image'],
                 'sb_deploy_tool': ['deploy'],
