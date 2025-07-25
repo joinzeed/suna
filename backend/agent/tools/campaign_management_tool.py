@@ -465,6 +465,89 @@ class CampaignManagementTool(Tool):
     @openapi_schema({
         "type": "function",
         "function": {
+            "name": "send_html_generation_job",
+            "description": "Send a job to trigger HTML generation for a specific batch.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "batch_id": {"type": "string", "description": "Batch identifier for the HTML generation job."},
+                    "select_all": {"type": "boolean", "description": "Whether to select all items."},
+                    "required_categories": {"type": "array", "items": {"type": "string"}, "description": "List of required categories."},
+                    "scanned_count": {"type": "integer", "description": "Number of preliminary research items."}
+                },
+                "required": ["batch_id", "select_all", "required_categories", "scanned_count"]
+            }
+        }
+    })
+    @xml_schema(
+        tag_name="send-html-generation-job",
+        mappings=[
+            {"param_name": "batch_id", "node_type": "attribute", "path": "."},
+            {"param_name": "select_all", "node_type": "attribute", "path": "."},
+            {"param_name": "required_categories", "node_type": "content", "path": "."},
+            {"param_name": "scanned_count", "node_type": "attribute", "path": "."}
+        ],
+        example='''
+        <function_calls>
+        <invoke name="send_html_generation_job">
+        <parameter name="batch_id">batch-123</parameter>
+        <parameter name="select_all">true</parameter>
+        <parameter name="required_categories">["category1", "category2"]</parameter>
+        <parameter name="scanned_count">42</parameter>
+        </invoke>
+        </function_calls>
+        '''
+    )
+    async def send_html_generation_job(self, batch_id: str, select_all: bool, required_categories: list, scanned_count: int) -> ToolResult:
+        """
+        Sends a message to trigger HTML generation for a specific batch.
+        Args:
+            batch_id (str): Batch identifier for the HTML generation job
+            select_all (bool): Whether to select all items
+            required_categories (list): List of required categories
+            scanned_count (int): Number of scanned items
+        Returns:
+            ToolResult: SQS response or error
+        """
+        queue_url = getattr(config, 'SQS_QUEUE_URL', None)
+        if not queue_url:
+            return self.fail_response("SQS_QUEUE_URL not configured in config.")
+        is_fifo_queue = queue_url.endswith('.fifo')
+        message_body = {
+            'batchId': batch_id,
+            'selectAll': select_all,
+            'requiredCategories': required_categories,
+            'htmlGeneration': True,
+            'outputPromptIndex': 1,
+            'scannedCount': scanned_count,
+            'createdAt': datetime.datetime.now().isoformat()
+        }
+        print("message_body", message_body)
+        message_params = {
+            'QueueUrl': queue_url,
+            'MessageBody': json.dumps(message_body)
+        }
+        if is_fifo_queue:
+            message_params['MessageGroupId'] = batch_id
+            message_params['MessageDeduplicationId'] = str(uuid.uuid4())
+        try:
+            async with self.session.client(
+                'sqs',
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                region_name=self.aws_region_name
+            ) as sqs:
+                response = await sqs.send_message(**message_params)
+                logger.info(f"HTML generation job submitted for batch {batch_id}")
+                return self.success_response(response)
+        except Exception as e:
+            error_msg = f"Failed to submit HTML generation job for batch {batch_id}: {str(e)}"
+            logger.error(error_msg)
+            return self.fail_response(error_msg)
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
             "name": "build_batch",
             "description": "Build a batch via Lambda. Requires batch_id, user_id, campaign_id, config_id, and select_all.",
             "parameters": {
@@ -648,4 +731,53 @@ class CampaignManagementTool(Tool):
             else:
                 return self.fail_response(f"No jobs found with the provided content_ids.")
         except Exception as e:
-            return self.fail_response(f"Failed to get job status: {str(e)}") 
+            return self.fail_response(f"Failed to get job status: {str(e)}")
+
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "get_batch_status",
+            "description": "Get the status of a batch from the content_batches table for the given batch_id and owner_id.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "batch_id": {"type": "string", "description": "Batch ID to check."},
+                    "owner_id": {"type": "string", "description": "Owner ID (user or account)."}
+                },
+                "required": ["batch_id", "owner_id"]
+            }
+        }
+    })
+    @xml_schema(
+        tag_name="get-batch-status",
+        mappings=[
+            {"param_name": "batch_id", "node_type": "attribute", "path": "."},
+            {"param_name": "owner_id", "node_type": "attribute", "path": "."}
+        ],
+        example='''
+        <function_calls>
+        <invoke name="get_batch_status">
+        <parameter name="batch_id">batch-123</parameter>
+        <parameter name="owner_id">user-456</parameter>
+        </invoke>
+        </function_calls>
+        '''
+    )
+    async def get_batch_status(self, batch_id: str, user_id: str) -> ToolResult:
+        """
+        Retrieves the status of a batch from the content_batches table for the given batch_id and owner_id.
+        Args:
+            batch_id (str): The batch ID to check.
+            user_id (str): The user ID.
+        Returns:
+            ToolResult: The result of the operation.
+        """
+        try:
+            supabase = await create_async_client(config.JOB_SUPABASE_URL, config.JOB_SUPABASE_SERVICE_ROLE_KEY)
+            response = await supabase.table('content_batches').select('*').eq('batch_id', batch_id).eq('owner_id', user_id).single().execute()
+            if response.data:
+                return self.success_response(response.data)
+            else:
+                return self.fail_response(f"No batch found with batch_id={batch_id} and owner_id={user_id}.")
+        except Exception as e:
+            return self.fail_response(f"Failed to get batch status: {str(e)}") 
