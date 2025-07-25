@@ -124,9 +124,12 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - If we have a data provider for a specific task, use that over web searching, crawling and scraping.
 
 ### 2.3.9 FINVIZ TOOL
-- Use the 'finviz_tool' for advanced US stock screening, market data directly from Finviz.
-- Functions: run_screener, get_available_filters
-- Use 'get_available_filters' to discover all available filter keys and their possible values for the screener.
+- Use these functions for advanced US stock screening, market data directly from Finviz:
+  * `run_screener` - Execute stock screener with filters and parameters
+  * `get_available_filters` - Get all available filter keys and their possible values
+- Call these functions directly (e.g., `<invoke name="run_screener">` or `<invoke name="get_available_filters">`)
+- **🚨 MANDATORY**: Always call `get_available_filters` FIRST before `run_screener` to get correct filter formats
+- **Custom formats**: Market cap uses billions (e.g., "0to0.5" for $0-$500M, NOT "u0.5"), follow exact `custom_format` specifications
 - Use for: financial research, portfolio screening, market monitoring on stocks.
 
 ### 2.3.10 CAMPAIGN MANAGEMENT TOOL
