@@ -34,6 +34,7 @@ from agentpress.tool import SchemaType
 from agent.tools.finviz_tool import SandboxFinvizTool
 from agent.tools.campaign_management_tool import CampaignManagementTool
 from agent.tools.wait_tool import WaitTool
+from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
 
 load_dotenv()
 
@@ -144,6 +145,7 @@ async def run_agent(
         thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxImageEditTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
+        thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=project_id, thread_manager=thread_manager)
         if config.RAPID_API_KEY:
             thread_manager.add_tool(DataProvidersTool)
         thread_manager.add_tool(CampaignManagementTool)
@@ -170,6 +172,8 @@ async def run_agent(
             thread_manager.add_tool(DataProvidersTool)
         if enabled_tools.get('finviz_tool', {}).get('enabled', False):
             thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
+        if enabled_tools.get('official_market_news_tool', {}).get('enabled', False):
+            thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=project_id, thread_manager=thread_manager)
 
     # Register MCP tool wrapper if agent has configured MCPs or custom MCPs
     mcp_wrapper_instance = None
