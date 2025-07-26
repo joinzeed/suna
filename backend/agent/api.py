@@ -318,6 +318,15 @@ async def start_agent(
     agent_config = None
     effective_agent_id = body.agent_id or thread_agent_id  # Use provided agent_id or the one stored in thread
     
+    # Validate agent_id is a proper UUID - if not, treat as no agent_id provided
+    if effective_agent_id:
+        try:
+            import uuid
+            uuid.UUID(effective_agent_id)
+        except (ValueError, TypeError):
+            logger.warning(f"[AGENT LOAD] Invalid agent_id format: {effective_agent_id}, falling back to default")
+            effective_agent_id = None
+    
     logger.info(f"[AGENT LOAD] Agent loading flow:")
     logger.info(f"  - body.agent_id: {body.agent_id}")
     logger.info(f"  - thread_agent_id: {thread_agent_id}")
