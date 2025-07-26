@@ -367,186 +367,96 @@ class SandboxFilesTool(SandboxToolsBase):
         except Exception as e:
             return self.fail_response(f"Error deleting file: {str(e)}")
 
-    async def _call_morph_api(self, file_content: str, code_edit: str, instructions: str, file_path: str) -> Optional[str]:
-        """Call Morph API to apply edits to file content"""
-        try:
-            morph_api_key = getattr(config, 'MORPH_API_KEY', None) or os.getenv('MORPH_API_KEY')
-            openrouter_key = getattr(config, 'OPENROUTER_API_KEY', None) or os.getenv('OPENROUTER_API_KEY')
-            
-            api_key = None
-            base_url = None
-            
-            if morph_api_key:
-                api_key = morph_api_key
-                base_url = "https://api.morphllm.com/v1"
-                logger.debug("Using Morph API for file editing.")
-            elif openrouter_key:
-                api_key = openrouter_key
-                base_url = "https://openrouter.ai/api/v1"
-                logger.debug("Morph API key not set, falling back to OpenRouter for file editing.")
-            
-            if not api_key:
-                logger.warning("No Morph or OpenRouter API key found, falling back to traditional editing")
-                return None
-            
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-                "HTTP-Referer": "https://suna.ai",
-                "X-Title": "Suna AI Agent"
-            }
-            
-            # Prepare the request for Morph's fast apply using the exact format from their docs
-            payload = {
-                "model": "morph/morph-code-edit",
-                "messages": [
-                    {
-                        "role": "user", 
-                        "content": f"<instructions>\n{instructions}\n</instructions>\n\n<code>\n{file_content}\n</code>\n\n<update>\n{code_edit}\n</update>"
-                    }
-                ],
-                "max_tokens": 16384,
-                "temperature": 0.0
-            }
-            
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(f"{base_url}/chat/completions", json=payload, headers=headers)
-                response.raise_for_status()
-                
-                result = response.json()
-                
-                if result.get("choices") and len(result["choices"]) > 0:
-                    content = result["choices"][0]["message"]["content"].strip()
-                    
-                    # Extract code block if wrapped in markdown
-                    if content.startswith("```") and content.endswith("```"):
-                        lines = content.split('\n')
-                        if len(lines) > 2:
-                            # Remove first line (```language) and last line (```)
-                            content = '\n'.join(lines[1:-1])
-                    
-                    return content
-                else:
-                    logger.error("Invalid response from Morph API")
-                    return None
-                    
-        except httpx.TimeoutException:
-            logger.error("Morph API request timed out")
-            return None
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Morph API returned error: {e.response.status_code}")
-            return None
-        except Exception as e:
-            logger.error(f"Error calling Morph API: {str(e)}")
-            return None
-
     @openapi_schema({
         "type": "function",
         "function": {
-            "name": "edit_file",
-            "description": "Use this tool to make an edit to an existing file.\n\nThis will be read by a less intelligent model, which will quickly apply the edit. You should make it clear what the edit is, while also minimizing the unchanged code you write.\nWhen writing the edit, you should specify each edit in sequence, with the special comment // ... existing code ... to represent unchanged code in between edited lines.\n\nFor example:\n\n// ... existing code ...\nFIRST_EDIT\n// ... existing code ...\nSECOND_EDIT\n// ... existing code ...\nTHIRD_EDIT\n// ... existing code ...\n\nYou should still bias towards repeating as few lines of the original file as possible to convey the change.\nBut, each edit should contain sufficient context of unchanged lines around the code you're editing to resolve ambiguity.\nDO NOT omit spans of pre-existing code (or comments) without using the // ... existing code ... comment to indicate its absence. If you omit the existing code comment, the model may inadvertently delete these lines.\nIf you plan on deleting a section, you must provide context before and after to delete it. If the initial code is ```code \\n Block 1 \\n Block 2 \\n Block 3 \\n code```, and you want to remove Block 2, you would output ```// ... existing code ... \\n Block 1 \\n  Block 3 \\n // ... existing code ...```.\nMake sure it is clear what the edit should be, and where it should be applied.\nALWAYS make all edits to a file in a single edit_file instead of multiple edit_file calls to the same file. The apply model can handle many distinct edits at once.",
+            "name": "copy_supabase_field_to_file",
+            "description": "Copy the value of a single field from a single row (by primary key) of a Supabase table in the job Supabase database into a file in the sandbox.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "target_file": {
+                    "table_name": {
                         "type": "string",
-                        "description": "The target file to modify"
+                        "description": "Name of the Supabase table to query."
                     },
-                    "instructions": {
-                        "type": "string", 
-                        "description": "A single sentence written in the first person describing what you're changing. Used to help disambiguate uncertainty in the edit."
-                    },
-                    "code_edit": {
+                    "field_name": {
                         "type": "string",
-                        "description": "Specify ONLY the precise lines of code that you wish to edit. Use // ... existing code ... for unchanged sections."
+                        "description": "Name of the field/column to extract."
+                    },
+                    "primary_key": {
+                        "type": "string",
+                        "description": "Name of the primary key column."
+                    },
+                    "primary_key_value": {
+                        "type": "string",
+                        "description": "Value of the primary key for the row to fetch."
+                    },
+                    "output_file_path": {
+                        "type": "string",
+                        "description": "Path to the output file in the sandbox, relative to /workspace."
                     }
                 },
-                "required": ["target_file", "instructions", "code_edit"]
+                "required": ["table_name", "field_name", "primary_key", "primary_key_value", "output_file_path"]
             }
         }
     })
     @xml_schema(
-        tag_name="edit-file",
+        tag_name="copy-supabase-field-to-file",
         mappings=[
-            {"param_name": "target_file", "node_type": "attribute", "path": "."},
-            {"param_name": "instructions", "node_type": "element", "path": "instructions"},
-            {"param_name": "code_edit", "node_type": "element", "path": "code_edit"}
+            {"param_name": "table_name", "node_type": "attribute", "path": "."},
+            {"param_name": "field_name", "node_type": "attribute", "path": "."},
+            {"param_name": "primary_key", "node_type": "attribute", "path": "."},
+            {"param_name": "primary_key_value", "node_type": "attribute", "path": "."},
+            {"param_name": "output_file_path", "node_type": "attribute", "path": "."}
         ],
         example='''
         <function_calls>
-        <invoke name="edit_file">
-        <parameter name="target_file">src/main.py</parameter>
-        <parameter name="instructions">I am adding error handling to the user authentication function</parameter>
-        <parameter name="code_edit">
-// ... existing code ...
-def authenticate_user(username, password):
-    try:
-        user = get_user(username)
-        if user and verify_password(password, user.password_hash):
-            return user
-        return None
-    except DatabaseError as e:
-        logger.error(f"Database error during authentication: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error during authentication: {e}")
-        return None
-// ... existing code ...
-        </parameter>
+        <invoke name="copy_supabase_field_to_file">
+        <parameter name="table_name">users</parameter>
+        <parameter name="field_name">email</parameter>
+        <parameter name="primary_key">id</parameter>
+        <parameter name="primary_key_value">1</parameter>
+        <parameter name="output_file_path">output/email.txt</parameter>
         </invoke>
         </function_calls>
         '''
     )
-    async def edit_file(self, target_file: str, instructions: str, code_edit: str) -> ToolResult:
-        """Edit a file using AI-powered intelligent editing with fallback to string replacement"""
+    async def copy_supabase_field_to_file(self, table_name: str, field_name: str, primary_key: str, primary_key_value: str, output_file_path: str) -> ToolResult:
+        """Copy the value of a single field from a single row (by primary key) of a Supabase table in the job Supabase database into a file in the sandbox."""
         try:
             # Ensure sandbox is initialized
             await self._ensure_sandbox()
-            
-            target_file = self.clean_path(target_file)
-            full_path = f"{self.workspace_path}/{target_file}"
-            if not await self._file_exists(full_path):
-                return self.fail_response(f"File '{target_file}' does not exist")
-            
-            # Read current content
-            original_content = (await self.sandbox.fs.download_file(full_path)).decode()
-            
-            # Try Morph AI editing first
-            logger.info(f"Attempting AI-powered edit for file '{target_file}' with instructions: {instructions[:100]}...")
-            new_content = await self._call_morph_api(original_content, code_edit, instructions, target_file)
-            
-            if new_content and new_content != original_content:
-                # AI editing successful
-                await self.sandbox.fs.upload_file(new_content.encode(), full_path)
-                
-                # Show snippet of changes
-                original_lines = original_content.split('\n')
-                new_lines = new_content.split('\n')
-                
-                # Find first differing line for context
-                diff_line = 0
-                for i, (old_line, new_line) in enumerate(zip(original_lines, new_lines)):
-                    if old_line != new_line:
-                        diff_line = i
-                        break
-                
-                # Show context around the change
-                start_line = max(0, diff_line - self.SNIPPET_LINES)
-                end_line = min(len(new_lines), diff_line + self.SNIPPET_LINES + 1)
-                snippet = '\n'.join(new_lines[start_line:end_line])
-                
-                message = f"File '{target_file}' edited successfully using AI-powered editing."
-                if snippet:
-                    message += f"\n\nPreview of changes (around line {diff_line + 1}):\n{snippet}"
-                
-                return self.success_response(message)
-            
-            else:
-                # No changes could be made
-                return self.fail_response(f"AI editing was unable to apply the requested changes. The edit may be unclear or the file content may not match the expected format.")
-                    
+
+            # Get job Supabase client from config
+            from utils.config import config
+            from supabase import create_async_client
+            supabase_url = config.JOB_SUPABASE_URL
+            supabase_key = config.JOB_SUPABASE_SERVICE_ROLE_KEY
+            if not supabase_url or not supabase_key:
+                return self.fail_response("Job Supabase URL or key not set in config.")
+            supabase = await create_async_client(supabase_url, supabase_key)
+
+            # Build query for single row by primary key
+            query = supabase.table(table_name).select(field_name).eq(primary_key, primary_key_value).single()
+            response = await query.execute()
+            if not response.data or field_name not in response.data:
+                return self.fail_response(f"No data found in table '{table_name}' for {primary_key}={primary_key_value} or field '{field_name}' missing.")
+
+            # Extract the field value
+            field_value = str(response.data[field_name])
+
+            # Write to file in sandbox
+            output_file_path = self.clean_path(output_file_path)
+            full_path = f"{self.workspace_path}/{output_file_path}"
+            parent_dir = '/'.join(full_path.split('/')[:-1])
+            if parent_dir:
+                await self.sandbox.fs.create_folder(parent_dir, "755")
+            await self.sandbox.fs.upload_file(field_value.encode(), full_path)
+            await self.sandbox.fs.set_file_permissions(full_path, "644")
+
+            return self.success_response(f"Copied field '{field_name}' from table '{table_name}' (row {primary_key}={primary_key_value}) to '{output_file_path}'.")
         except Exception as e:
-            return self.fail_response(f"Error editing file: {str(e)}")
+            return self.fail_response(f"Error copying Supabase field: {str(e)}")
 
     # @openapi_schema({
     #     "type": "function",

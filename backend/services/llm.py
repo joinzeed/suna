@@ -2,7 +2,7 @@
 LLM API interface for making calls to various language models.
 
 This module provides a unified interface for making API calls to different LLM providers
-(OpenAI, Anthropic, Groq, xAI, etc.) using LiteLLM. It includes support for:
+(OpenAI, Anthropic, Google Gemini, Groq, xAI, etc.) using LiteLLM. It includes support for:
 - Streaming responses
 - Tool calls and function calling
 - Retry logic with exponential backoff
@@ -38,7 +38,7 @@ class LLMRetryError(LLMError):
 
 def setup_api_keys() -> None:
     """Set up API keys from environment variables."""
-    providers = ['OPENAI', 'ANTHROPIC', 'GROQ', 'OPENROUTER', 'XAI', 'MORPH']
+    providers = ['OPENAI', 'ANTHROPIC', 'GROQ','GOOGLE', 'OPENROUTER', 'XAI', 'MORPH']
     for provider in providers:
         key = getattr(config, f'{provider}_API_KEY')
         if key:
@@ -128,8 +128,17 @@ def prepare_params(
         "stream": stream,
     }
 
+    # API key selection logic
     if api_key:
         params["api_key"] = api_key
+    elif model_name.startswith("gemini/gemini") and config.GOOGLE_API_KEY:
+        params["api_key"] = config.GOOGLE_API_KEY
+    elif model_name.startswith("openai/") and config.OPENAI_API_KEY:
+        params["api_key"] = config.OPENAI_API_KEY
+    elif model_name.startswith("anthropic/") and config.ANTHROPIC_API_KEY:
+        params["api_key"] = config.ANTHROPIC_API_KEY
+    elif model_name.startswith("openrouter/") and config.OPENROUTER_API_KEY:
+        params["api_key"] = config.OPENROUTER_API_KEY
     if api_base:
         params["api_base"] = api_base
     if model_id:
@@ -233,7 +242,8 @@ def prepare_params(
     is_anthropic = "anthropic" in effective_model_name.lower() or "claude" in effective_model_name.lower()
     is_xai = "xai" in effective_model_name.lower() or model_name.startswith("xai/")
     is_kimi_k2 = "kimi-k2" in effective_model_name.lower() or model_name.startswith("moonshotai/kimi-k2")
-
+    is_gemini = "gemini" in effective_model_name.lower() or model_name.startswith("google/gemini")
+    
     if is_kimi_k2:
         params["provider"] = {
             "order": ["together/fp8", "novita/fp8", "baseten/fp8", "moonshotai", "groq"]
@@ -255,6 +265,11 @@ def prepare_params(
     if model_name.startswith("xai/"):
         logger.debug(f"Preparing xAI parameters for model: {model_name}")
         # xAI models support standard parameters, no special handling needed beyond reasoning_effort
+
+    # Add Google Gemini-specific parameters
+    if is_gemini:
+        # Set provider for official Google Gemini API
+        params["provider"] = "google"
 
     return params
 
@@ -279,7 +294,7 @@ async def make_llm_api_call(
 
     Args:
         messages: List of message dictionaries for the conversation
-        model_name: Name of the model to use (e.g., "gpt-4", "claude-3", "openrouter/openai/gpt-4", "bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
+        model_name: Name of the model to use (e.g., "gpt-4", "claude-3", "openrouter/openai/gpt-4", "bedrock/anthropic.claude-3-sonnet-20240229-v1:0", "google/gemini-pro")
         response_format: Desired format for the response
         temperature: Sampling temperature (0-1)
         max_tokens: Maximum tokens in the response
@@ -303,6 +318,7 @@ async def make_llm_api_call(
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
     logger.info(f"📡 API Call: Using model {model_name}")
+    print("99999999999999")
     params = prepare_params(
         messages=messages,
         model_name=model_name,
@@ -319,6 +335,8 @@ async def make_llm_api_call(
         enable_thinking=enable_thinking,
         reasoning_effort=reasoning_effort
     )
+    print("121212121", params)
+    print("jjdkdjkad")
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
@@ -326,6 +344,8 @@ async def make_llm_api_call(
             # logger.debug(f"API request parameters: {json.dumps(params, indent=2)}")
 
             response = await litellm.acompletion(**params)
+            print('popopopopo')
+            print("999999", response)
             logger.debug(f"Successfully received API response from {model_name}")
             # logger.debug(f"Response: {response}")
             return response

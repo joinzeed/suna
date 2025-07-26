@@ -1,0 +1,30 @@
+{
+  "name": "Suna Backend Development",
+  "dockerComposeFile": "../docker-compose.yaml",
+  "service": "backend",
+  "workspaceFolder": "/app",
+  
+  "postCreateCommand": "echo 'Backend development ready!'",
+  
+  "remoteUser": "root",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.isort"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/app/.venv/bin/python",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  
+  "forwardPorts": [8000, 6379, 5672, 15672],
+  
+  "containerEnv": {
+    "SHELL": "/bin/bash"
+  }
+}

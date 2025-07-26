@@ -645,15 +645,18 @@ class WorkflowPromptBuilder:
         available_tools = []
         agentpress_tools = agent_config.get('agentpress_tools', {})
         tool_mapping = {
-            'sb_shell_tool': ['execute_command'],
-            'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file'],
-            'sb_browser_tool': ['browser_navigate_to', 'browser_take_screenshot'],
-            'sb_vision_tool': ['see_image'],
-            'sb_deploy_tool': ['deploy'],
-            'sb_expose_tool': ['expose_port'],
-            'web_search_tool': ['web_search'],
-            'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call']
-        }
+                'sb_shell_tool': ['execute_command'],
+                'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file', 'copy_supabase_field_to_file'],
+                'sb_browser_tool': ['browser_navigate_to', 'browser_take_screenshot'],
+                'sb_vision_tool': ['see_image'],
+                'sb_deploy_tool': ['deploy'],
+                'sb_expose_tool': ['expose_port'],
+                'web_search_tool': ['web_search'],
+                'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
+                'finviz_tool': ['run_screener', 'get_available_filters'],
+                'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_preliminary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
+                'wait_tool': ['wait']
+            }
         
         for tool_key, tool_names in tool_mapping.items():
             if agentpress_tools.get(tool_key, {}).get('enabled', False):

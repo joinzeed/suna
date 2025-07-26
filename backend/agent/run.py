@@ -31,6 +31,10 @@ from services.langfuse import langfuse
 from agent.gemini_prompt import get_gemini_system_prompt
 from agent.tools.mcp_tool_wrapper import MCPToolWrapper
 from agentpress.tool import SchemaType
+from agent.tools.finviz_tool import SandboxFinvizTool
+from agent.tools.campaign_management_tool import CampaignManagementTool
+from agent.tools.wait_tool import WaitTool
+from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
 
 load_dotenv()
 
@@ -140,8 +144,12 @@ async def run_agent(
         thread_manager.add_tool(SandboxWebSearchTool, project_id=project_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxImageEditTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
+        thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
+        thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=project_id, thread_manager=thread_manager)
         if config.RAPID_API_KEY:
             thread_manager.add_tool(DataProvidersTool)
+        thread_manager.add_tool(CampaignManagementTool)
+        thread_manager.add_tool(WaitTool)
     else:
         logger.info("Custom agent specified - registering only enabled tools")
         thread_manager.add_tool(ExpandMessageTool, thread_id=thread_id, thread_manager=thread_manager)
@@ -162,6 +170,10 @@ async def run_agent(
             thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         if config.RAPID_API_KEY and enabled_tools.get('data_providers_tool', {}).get('enabled', False):
             thread_manager.add_tool(DataProvidersTool)
+        if enabled_tools.get('finviz_tool', {}).get('enabled', False):
+            thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
+        if enabled_tools.get('official_market_news_tool', {}).get('enabled', False):
+            thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=project_id, thread_manager=thread_manager)
 
     # Register MCP tool wrapper if agent has configured MCPs or custom MCPs
     mcp_wrapper_instance = None
@@ -256,7 +268,7 @@ async def run_agent(
 
     # Prepare system prompt
     # First, get the default system prompt
-    if "gemini-2.5-flash" in model_name.lower() and "gemini-2.5-pro" not in model_name.lower():
+    if "gemini" in model_name.lower():
         default_system_content = get_gemini_system_prompt()
     else:
         # Use the original prompt - the LLM can only use tools that are registered
@@ -516,7 +528,7 @@ async def run_agent(
             max_tokens = 4096
         elif "gemini-2.5-pro" in model_name.lower():
             # Gemini 2.5 Pro has 64k max output tokens
-            max_tokens = 64000
+            max_tokens = 100000
         elif "kimi-k2" in model_name.lower():
             # Kimi-K2 has 120K context, set reasonable max output tokens
             max_tokens = 8192

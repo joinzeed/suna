@@ -176,6 +176,7 @@ class Configuration:
     OPENROUTER_API_KEY: Optional[str] = None
     XAI_API_KEY: Optional[str] = None
     MORPH_API_KEY: Optional[str] = None
+    GOOGLE_API_KEY: Optional[str] = None
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OR_SITE_URL: Optional[str] = "https://kortix.ai"
     OR_APP_NAME: Optional[str] = "Kortix AI"    
@@ -184,6 +185,9 @@ class Configuration:
     AWS_ACCESS_KEY_ID: Optional[str] = None
     AWS_SECRET_ACCESS_KEY: Optional[str] = None
     AWS_REGION_NAME: Optional[str] = None
+    CAMPAIGN_MANAGEMENT_LAMBDA_FUNCTION_NAME: Optional[str] = None
+    SQS_QUEUE_URL: Optional[str] = None
+    DEEP_RESEARCH_QUEUE_URL: Optional[str] = None
     
     # Model configuration
     MODEL_TO_USE: Optional[str] = "anthropic/claude-sonnet-4-20250514"
@@ -233,6 +237,23 @@ class Configuration:
 
     # Admin API key for server-side operations
     ADMIN_API_KEY: Optional[str] = None
+    
+    # Finviz configuration
+    FINVIZ_ELITE_EMAIL: Optional[str] = None
+    FINVIZ_ELITE_PASSWORD: Optional[str] = None
+    
+    # AWS configuration
+    AWS_ACCESS_KEY_ID: Optional[str] = None
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None
+    AWS_REGION_NAME: Optional[str] = None
+    CAMPAIGN_MANAGEMENT_LAMBDA_FUNCTION_NAME: Optional[str] = None
+    SQS_QUEUE_URL: Optional[str] = None
+    
+    
+    # Job Supabase configuration
+    JOB_SUPABASE_URL: Optional[str] = None
+    JOB_SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
+    
     
     @property
     def STRIPE_PRODUCT_ID(self) -> str:
