@@ -6,19 +6,19 @@ from jwt.exceptions import PyJWTError
 from utils.logger import structlog
 from utils.config import config
 
-# This function extracts the user ID from Clerk JWT (via Supabase integration)
+# This function extracts the user ID from Supabase JWT
 async def get_current_user_id_from_jwt(request: Request) -> str:
     """
-    Extract and verify the user ID from the Clerk JWT in the Authorization header.
+    Extract and verify the user ID from the JWT in the Authorization header.
     
-    Thanks to the Supabase-Clerk integration, Clerk JWTs are automatically verified
-    by Supabase, so we just need to extract the Clerk user ID from the 'sub' claim.
+    This function is used as a dependency in FastAPI routes to ensure the user
+    is authenticated and to provide the user ID for authorization checks.
     
     Args:
         request: The FastAPI request object
         
     Returns:
-        str: The Clerk user ID extracted from the JWT (format: user_xxxxx)
+        str: The user ID extracted from the JWT
         
     Raises:
         HTTPException: If no valid token is found or if the token is invalid
@@ -35,33 +35,21 @@ async def get_current_user_id_from_jwt(request: Request) -> str:
     token = auth_header.split(' ')[1]
     
     try:
-        # Decode without verification since Supabase handles verification via Clerk integration
         payload = jwt.decode(token, options={"verify_signature": False})
+        user_id = payload.get('sub')
         
-        # Extract Clerk user ID from 'sub' claim
-        clerk_user_id = payload.get('sub')
-        
-        if not clerk_user_id:
+        if not user_id:
             raise HTTPException(
                 status_code=401,
-                detail="Invalid token payload - missing user ID",
-                headers={"WWW-Authenticate": "Bearer"}
-            )
-        
-        # Validate that this looks like a Clerk user ID
-        if not clerk_user_id.startswith('user_'):
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid Clerk user ID format",
+                detail="Invalid token payload",
                 headers={"WWW-Authenticate": "Bearer"}
             )
 
-        # Set user context for logging and monitoring
-        sentry.sentry.set_user({ "id": clerk_user_id })
+        sentry.sentry.set_user({ "id": user_id })
         structlog.contextvars.bind_contextvars(
-            user_id=clerk_user_id
+            user_id=user_id
         )
-        return clerk_user_id
+        return user_id
         
     except PyJWTError:
         raise HTTPException(
@@ -69,13 +57,6 @@ async def get_current_user_id_from_jwt(request: Request) -> str:
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"}
         )
-
-# Legacy function name for backward compatibility
-async def get_current_user_id(request: Request) -> str:
-    """
-    Legacy function name - redirects to get_current_user_id_from_jwt
-    """
-    return await get_current_user_id_from_jwt(request)
 
 async def get_account_id_from_thread(client, thread_id: str) -> str:
     """
@@ -128,7 +109,7 @@ async def get_user_id_from_stream_auth(
     token: Optional[str] = None
 ) -> str:
     """
-    Extract and verify the Clerk user ID from either the Authorization header or query parameter token.
+    Extract and verify the user ID from either the Authorization header or query parameter token.
     This function is specifically designed for streaming endpoints that need to support both
     header-based and query parameter-based authentication (for EventSource compatibility).
     
@@ -137,7 +118,7 @@ async def get_user_id_from_stream_auth(
         token: Optional token from query parameters
         
     Returns:
-        str: The Clerk user ID extracted from the JWT (format: user_xxxxx)
+        str: The user ID extracted from the JWT
         
     Raises:
         HTTPException: If no valid token is found or if the token is invalid
@@ -146,15 +127,15 @@ async def get_user_id_from_stream_auth(
         # Try to get user_id from token in query param (for EventSource which can't set headers)
         if token:
             try:
-                # Decode Clerk JWT (verification handled by Supabase integration)
+                # For Supabase JWT, we just need to decode and extract the user ID
                 payload = jwt.decode(token, options={"verify_signature": False})
-                clerk_user_id = payload.get('sub')
-                if clerk_user_id and clerk_user_id.startswith('user_'):
-                    sentry.sentry.set_user({ "id": clerk_user_id })
+                user_id = payload.get('sub')
+                if user_id:
+                    sentry.sentry.set_user({ "id": user_id })
                     structlog.contextvars.bind_contextvars(
-                        user_id=clerk_user_id
+                        user_id=user_id
                     )
-                    return clerk_user_id
+                    return user_id
             except Exception:
                 pass
         
@@ -165,9 +146,9 @@ async def get_user_id_from_stream_auth(
                 # Extract token from header
                 header_token = auth_header.split(' ')[1]
                 payload = jwt.decode(header_token, options={"verify_signature": False})
-                clerk_user_id = payload.get('sub')
-                if clerk_user_id and clerk_user_id.startswith('user_'):
-                    return clerk_user_id
+                user_id = payload.get('sub')
+                if user_id:
+                    return user_id
             except Exception:
                 pass
         
@@ -250,7 +231,7 @@ async def verify_thread_access(client, thread_id: str, user_id: str):
 
 async def get_optional_user_id(request: Request) -> Optional[str]:
     """
-    Extract the Clerk user ID from the JWT in the Authorization header if present,
+    Extract the user ID from the JWT in the Authorization header if present,
     but don't require authentication. Returns None if no valid token is found.
     
     This function is used for endpoints that support both authenticated and 
@@ -260,7 +241,7 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
         request: The FastAPI request object
         
     Returns:
-        Optional[str]: The Clerk user ID extracted from the JWT, or None if no valid token
+        Optional[str]: The user ID extracted from the JWT, or None if no valid token
     """
     auth_header = request.headers.get('Authorization')
     
@@ -270,19 +251,18 @@ async def get_optional_user_id(request: Request) -> Optional[str]:
     token = auth_header.split(' ')[1]
     
     try:
-        # Decode Clerk JWT (verification handled by Supabase integration)
+        # For Supabase JWT, we just need to decode and extract the user ID
         payload = jwt.decode(token, options={"verify_signature": False})
         
-        # Extract Clerk user ID from 'sub' claim
-        clerk_user_id = payload.get('sub')
-        if clerk_user_id and clerk_user_id.startswith('user_'):
-            sentry.sentry.set_user({ "id": clerk_user_id })
+        # Supabase stores the user ID in the 'sub' claim
+        user_id = payload.get('sub')
+        if user_id:
+            sentry.sentry.set_user({ "id": user_id })
             structlog.contextvars.bind_contextvars(
-                user_id=clerk_user_id
+                user_id=user_id
             )
-            return clerk_user_id
         
-        return None
+        return user_id
     except PyJWTError:
         return None
 
