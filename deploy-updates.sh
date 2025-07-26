@@ -97,6 +97,11 @@ REBUILD_CMD+="sudo docker compose up -d"
 
 gcloud compute ssh suna-instance --zone=${ZONE} --command="$REBUILD_CMD"
 
+# Reload Nginx to ensure proper connection to updated containers
+echo -e "${YELLOW}Reloading Nginx...${NC}"
+gcloud compute ssh suna-instance --zone=${ZONE} --command="sudo nginx -t && sudo systemctl reload nginx"
+echo -e "${GREEN}✓ Nginx reloaded${NC}"
+
 echo -e "${GREEN}=== Deployment Complete! ===${NC}"
 echo -e "Frontend: http://34.142.105.100:3000"
 echo -e "Backend: http://34.142.105.100:8000"
