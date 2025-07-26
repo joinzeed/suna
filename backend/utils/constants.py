@@ -171,12 +171,12 @@ def _generate_model_structures():
 FREE_TIER_MODELS, PAID_TIER_MODELS, MODEL_NAME_ALIASES, HARDCODED_MODEL_PRICES = _generate_model_structures()
 
 MODEL_ACCESS_TIERS = {
-    "free": FREE_TIER_MODELS,
-    "tier_2_20": PAID_TIER_MODELS,
-    "tier_6_50": PAID_TIER_MODELS,
-    "tier_12_100": PAID_TIER_MODELS,
-    "tier_25_200": PAID_TIER_MODELS,
-    "tier_50_400": PAID_TIER_MODELS,
-    "tier_125_800": PAID_TIER_MODELS,
-    "tier_200_1000": PAID_TIER_MODELS,
+    "free": list(MODELS.keys()),  # Make ALL models available for free
+    "tier_2_20": list(MODELS.keys()),
+    "tier_6_50": list(MODELS.keys()),
+    "tier_12_100": list(MODELS.keys()),
+    "tier_25_200": list(MODELS.keys()),
+    "tier_50_400": list(MODELS.keys()),
+    "tier_125_800": list(MODELS.keys()),
+    "tier_200_1000": list(MODELS.keys()),
 }
