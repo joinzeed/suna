@@ -31,9 +31,9 @@ export interface CustomModel {
 // SINGLE SOURCE OF TRUTH for all model data - aligned with backend constants
 export const MODELS = {
   // Free tier models (available to all users)
-  'claude-sonnet-4': { 
+  'claude-sonnet-4': {
     tier: 'free',
-    priority: 100, 
+    priority: 100,
     recommended: true,
     lowQuality: false
   },
@@ -52,50 +52,50 @@ export const MODELS = {
   // },
 
   // Premium/Paid tier models (require subscription) - except specific free models
-  'moonshotai/kimi-k2': { 
-    tier: 'free', 
+  'moonshotai/kimi-k2': {
+    tier: 'free',
     priority: 99,
     recommended: false,
     lowQuality: false
   },
-  'grok-4': { 
-    tier: 'premium', 
+  'grok-4': {
+    tier: 'premium',
     priority: 98,
     recommended: false,
     lowQuality: false
   },
-  'sonnet-3.7': { 
-    tier: 'premium', 
-    priority: 97, 
+  'sonnet-3.7': {
+    tier: 'premium',
+    priority: 97,
     recommended: false,
     lowQuality: false
   },
-  'gemini/gemini-2.5-pro': { 
-    tier: 'premium', 
+  'gemini/gemini-2.5-pro': {
+    tier: 'free',
     priority: 96,
     recommended: false,
     lowQuality: false
   },
-  'gpt-4.1': { 
-    tier: 'premium', 
+  'gpt-4.1': {
+    tier: 'premium',
     priority: 96,
     recommended: false,
     lowQuality: false
   },
-  'sonnet-3.5': { 
-    tier: 'premium', 
+  'sonnet-3.5': {
+    tier: 'premium',
     priority: 90,
     recommended: false,
     lowQuality: false
   },
-  'gpt-4o': { 
-    tier: 'premium', 
+  'gpt-4o': {
+    tier: 'premium',
     priority: 88,
     recommended: false,
     lowQuality: false
   },
-  'gemini-2.5-flash:thinking': { 
-    tier: 'premium', 
+  'gemini-2.5-flash:thinking': {
+    tier: 'premium',
     priority: 84,
     recommended: false,
     lowQuality: false
@@ -138,18 +138,18 @@ export const getPrefixedModelId = (modelId: string, isCustom: boolean): string =
 // Helper to get custom models from localStorage
 export const getCustomModels = (): CustomModel[] => {
   if (!isLocalMode() || typeof window === 'undefined') return [];
-  
+
   try {
     const storedModels = localStorage.getItem(STORAGE_KEY_CUSTOM_MODELS);
     if (!storedModels) return [];
-    
+
     const parsedModels = JSON.parse(storedModels);
     if (!Array.isArray(parsedModels)) return [];
-    
+
     return parsedModels
-      .filter((model: any) => 
-        model && typeof model === 'object' && 
-        typeof model.id === 'string' && 
+      .filter((model: any) =>
+        model && typeof model === 'object' &&
+        typeof model.id === 'string' &&
         typeof model.label === 'string');
   } catch (e) {
     console.error('Error parsing custom models:', e);
@@ -170,14 +170,14 @@ export const useModelSelection = () => {
   const [selectedModel, setSelectedModel] = useState(DEFAULT_FREE_MODEL_ID);
   const [customModels, setCustomModels] = useState<CustomModel[]>([]);
   const [hasInitialized, setHasInitialized] = useState(false);
-  
+
   const { data: subscriptionData } = useSubscription();
   const { data: modelsData, isLoading: isLoadingModels } = useAvailableModels({
     refetchOnMount: false,
   });
-  
-  const subscriptionStatus: SubscriptionStatus = subscriptionData?.status === 'active' 
-    ? 'active' 
+
+  const subscriptionStatus: SubscriptionStatus = subscriptionData?.status === 'active'
+    ? 'active'
     : 'no_subscription';
 
   // Function to refresh custom models from localStorage
@@ -196,20 +196,20 @@ export const useModelSelection = () => {
   // Generate model options list with consistent structure
   const MODEL_OPTIONS = useMemo(() => {
     let models = [];
-    
+
     // Default models if API data not available
     if (!modelsData?.models || isLoadingModels) {
       models = [
-        { 
-          id: DEFAULT_FREE_MODEL_ID, 
-          label: 'DeepSeek', 
+        {
+          id: DEFAULT_FREE_MODEL_ID,
+          label: 'DeepSeek',
           requiresSubscription: false,
           priority: MODELS[DEFAULT_FREE_MODEL_ID]?.priority || 50
         },
-        { 
-          id: DEFAULT_PREMIUM_MODEL_ID, 
-          label: 'Sonnet 4', 
-          requiresSubscription: true, 
+        {
+          id: DEFAULT_PREMIUM_MODEL_ID,
+          label: 'Sonnet 4',
+          requiresSubscription: true,
           priority: MODELS[DEFAULT_PREMIUM_MODEL_ID]?.priority || 100
         },
       ];
@@ -218,23 +218,23 @@ export const useModelSelection = () => {
       models = modelsData.models.map(model => {
         const shortName = model.short_name || model.id;
         const displayName = model.display_name || shortName;
-        
+
         // Format the display label
         let cleanLabel = displayName;
         if (cleanLabel.includes('/')) {
           cleanLabel = cleanLabel.split('/').pop() || cleanLabel;
         }
-        
+
         cleanLabel = cleanLabel
           .replace(/-/g, ' ')
           .split(' ')
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ');
-        
+
         // Get model data from our central MODELS constant
         const modelData = MODELS[shortName] || {};
         const isPremium = model?.requires_subscription || modelData.tier === 'premium' || false;
-        
+
         return {
           id: shortName,
           label: cleanLabel,
@@ -246,7 +246,7 @@ export const useModelSelection = () => {
         };
       });
     }
-    
+
     // Add custom models if in local mode
     if (isLocalMode() && customModels.length > 0) {
       const customModelOptions = customModels.map(model => ({
@@ -259,10 +259,10 @@ export const useModelSelection = () => {
         lowQuality: false,
         recommended: false
       }));
-      
+
       models = [...models, ...customModelOptions];
     }
-    
+
     // Sort models consistently in one place:
     // 1. First by recommended (recommended first)
     // 2. Then by priority (higher first)
@@ -277,7 +277,7 @@ export const useModelSelection = () => {
       if (a.priority !== b.priority) {
         return b.priority - a.priority;
       }
-      
+
       // Finally by name
       return a.label.localeCompare(b.label);
     });
@@ -286,23 +286,23 @@ export const useModelSelection = () => {
 
   // Get filtered list of models the user can access (no additional sorting)
   const availableModels = useMemo(() => {
-    return isLocalMode() 
-      ? MODEL_OPTIONS 
-      : MODEL_OPTIONS.filter(model => 
-          canAccessModel(subscriptionStatus, model.requiresSubscription)
-        );
+    return isLocalMode()
+      ? MODEL_OPTIONS
+      : MODEL_OPTIONS.filter(model =>
+        canAccessModel(subscriptionStatus, model.requiresSubscription)
+      );
   }, [MODEL_OPTIONS, subscriptionStatus]);
 
   // Initialize selected model from localStorage ONLY ONCE
   useEffect(() => {
     if (typeof window === 'undefined' || hasInitialized) return;
-    
+
     console.log('Initializing model selection from localStorage...');
-    
+
     try {
       const savedModel = localStorage.getItem(STORAGE_KEY_MODEL);
       console.log('Saved model from localStorage:', savedModel);
-      
+
       // If we have a saved model, validate it's still available and accessible
       if (savedModel) {
         // Wait for models to load before validating
@@ -310,15 +310,15 @@ export const useModelSelection = () => {
           console.log('Models still loading, waiting...');
           return;
         }
-        
+
         const modelOption = MODEL_OPTIONS.find(option => option.id === savedModel);
         const isCustomModel = isLocalMode() && customModels.some(model => model.id === savedModel);
-        
+
         // Check if saved model is still valid and accessible
         if (modelOption || isCustomModel) {
-          const isAccessible = isLocalMode() || 
+          const isAccessible = isLocalMode() ||
             canAccessModel(subscriptionStatus, modelOption?.requiresSubscription ?? false);
-          
+
           if (isAccessible) {
             console.log('Using saved model:', savedModel);
             setSelectedModel(savedModel);
@@ -331,14 +331,14 @@ export const useModelSelection = () => {
           console.log('Saved model not found in available models, falling back to default');
         }
       }
-      
+
       // Fallback to default model
       const defaultModel = subscriptionStatus === 'active' ? DEFAULT_PREMIUM_MODEL_ID : DEFAULT_FREE_MODEL_ID;
       console.log('Using default model:', defaultModel);
       setSelectedModel(defaultModel);
       saveModelPreference(defaultModel);
       setHasInitialized(true);
-      
+
     } catch (error) {
       console.warn('Failed to load preferences from localStorage:', error);
       const defaultModel = subscriptionStatus === 'active' ? DEFAULT_PREMIUM_MODEL_ID : DEFAULT_FREE_MODEL_ID;
@@ -351,22 +351,22 @@ export const useModelSelection = () => {
   // Handle model selection change
   const handleModelChange = (modelId: string) => {
     console.log('handleModelChange called with:', modelId);
-    
+
     // Refresh custom models from localStorage to ensure we have the latest
     if (isLocalMode()) {
       refreshCustomModels();
     }
-    
+
     // First check if it's a custom model in local mode
     const isCustomModel = isLocalMode() && customModels.some(model => model.id === modelId);
-    
+
     // Then check if it's in standard MODEL_OPTIONS
     const modelOption = MODEL_OPTIONS.find(option => option.id === modelId);
-    
+
     // Check if model exists in either custom models or standard options
     if (!modelOption && !isCustomModel) {
       console.warn('Model not found in options:', modelId, MODEL_OPTIONS, isCustomModel, customModels);
-      
+
       // Reset to default model when the selected model is not found
       const defaultModel = isLocalMode() ? DEFAULT_PREMIUM_MODEL_ID : DEFAULT_FREE_MODEL_ID;
       setSelectedModel(defaultModel);
@@ -375,12 +375,12 @@ export const useModelSelection = () => {
     }
 
     // Check access permissions (except for custom models in local mode)
-    if (!isCustomModel && !isLocalMode() && 
-        !canAccessModel(subscriptionStatus, modelOption?.requiresSubscription ?? false)) {
+    if (!isCustomModel && !isLocalMode() &&
+      !canAccessModel(subscriptionStatus, modelOption?.requiresSubscription ?? false)) {
       console.warn('Model not accessible:', modelId);
       return;
     }
-    
+
     console.log('Setting selected model and saving to localStorage:', modelId);
     setSelectedModel(modelId);
     saveModelPreference(modelId);
