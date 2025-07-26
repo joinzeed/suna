@@ -86,7 +86,7 @@ echo -e "${YELLOW}Rebuilding and restarting containers...${NC}"
 REBUILD_CMD="cd /opt/suna && "
 
 if [ "$SYNC_BACKEND" == "true" ]; then
-    REBUILD_CMD+="sudo docker compose build backend --no-cache && "
+    REBUILD_CMD+="sudo docker compose build backend worker --no-cache && "
 fi
 
 if [ "$SYNC_FRONTEND" == "true" ]; then
