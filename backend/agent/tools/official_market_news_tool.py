@@ -115,6 +115,8 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                         data = json.loads(content)
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse JSON response: {e}")
+                        # Log first 200 chars for debugging
+                        logging.debug(f"Response content: {content[:200]}...")
                         return self.fail_response(f"Failed to parse Nordic API response: {e}")
 
                     # Extract and format the news items
@@ -201,6 +203,7 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             query_string = "&".join([f"{k}={v}" for k, v in params.items()])
             url = f"{base_url}?{query_string}"
             logging.info(f"Fetching LSEG news from Investegate with query: {free_text}")
+            logging.info(f"URL: {url}")
 
             # Firecrawl API configuration
             api_url = "https://api.firecrawl.dev/v1/scrape"
@@ -316,18 +319,19 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                         )
                     else:
                         error_msg = result.get('error', 'Unknown error')
-                        logging.error(f"Scraping failed: {error_msg}")
+                        logging.error("❌ Scraping failed:")
+                        logging.error(error_msg)
                         return self.fail_response(f"Scraping failed: {error_msg}")
 
         except aiohttp.ClientError as e:
-            logging.error(f"HTTP request failed: {e}")
+            logging.error(f"❌ HTTP request failed: {e}")
             return self.fail_response(f"HTTP request failed: {e}")
         except asyncio.TimeoutError:
-            logging.error("Request timed out")
+            logging.error("❌ Request timed out")
             return self.fail_response("Request timed out")
         except Exception as e:
             error_message = str(e)
-            logging.error(f"Unexpected error in get_lseg_rns_placement_list: {error_message}")
+            logging.error(f"❌ Unexpected error in get_lseg_rns_placement_list: {error_message}")
             return self.fail_response(f"Error fetching LSEG news: {error_message}")
 
     @openapi_schema({
@@ -419,9 +423,11 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             "timeout": 60000,
             "actions": [
                 {"type": "wait", "milliseconds": 2000},
+
                 {"type": "wait", "milliseconds": 2000},
                 {"type": "click", "selector": "#edit-combine"},
                 {"type": "write", "selector": "#edit-combine", "text": free_text},
+
                 # Apply the filter using the more specific selector
                 {"type": "click", "selector": "input[value='Apply']"},
                 {"type": "wait", "milliseconds": 3000}
@@ -452,7 +458,8 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                     result = await response.json()
 
                     if result.get('success'):
-                        logging.info("Successfully scraped Euronext RNS placement news")
+                        logging.info("✅ Successfully scraped Euronext RNS placement news")
+                        logging.info(f"\n📄 Content length: {len(result['data']['json'])}")
                         raw_data = result['data']['json']
                         
                         formatted_results = [{
@@ -466,26 +473,24 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                             "picked_reason": "Euronext Fundraises"
                         } for item in raw_data]
                         
-                        logging.info(f"Found {len(formatted_results)} Euronext news items")
-                        
                         return ToolResult(
                             success=True,
                             output=json.dumps(formatted_results, ensure_ascii=False, indent=2)
                         )
                     else:
-                        error_msg = result.get('error', 'Unknown error')
-                        logging.error(f"Scraping failed: {error_msg}")
-                        return self.fail_response(f"Scraping failed: {error_msg}")
+                        logging.error("❌ Scraping failed:")
+                        logging.error(result.get('error', 'Unknown error'))
+                        return self.fail_response(f"Scraping failed: {result.get('error', 'Unknown error')}")
 
         except aiohttp.ClientError as e:
-            logging.error(f"HTTP request failed: {e}")
+            logging.error(f"❌ HTTP request failed: {e}")
             return self.fail_response(f"HTTP request failed: {e}")
         except asyncio.TimeoutError:
-            logging.error("Request timed out")
+            logging.error("❌ Request timed out")
             return self.fail_response("Request timed out")
         except Exception as e:
             error_message = str(e)
-            logging.error(f"Unexpected error: {error_message}")
+            logging.error(f"❌ Unexpected error: {error_message}")
             return self.fail_response(f"Error fetching Euronext news: {error_message}")
 
 
