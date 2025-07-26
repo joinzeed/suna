@@ -445,29 +445,20 @@ async def get_allowed_models_for_user(client, user_id: str):
 
 
 async def can_use_model(client, user_id: str, model_name: str):
-    # BILLING DISABLED: Always allow model access for all users
-    logger.info("Billing checks disabled - allowing access to all models")
-    return True, "Billing disabled - all models allowed", {
-        "price_id": "billing_disabled",
-        "plan_name": "Unlimited Access",
-        "minutes_limit": "no limit"
-    }
+    if config.ENV_MODE == EnvMode.LOCAL:
+        logger.info("Running in local development mode - billing checks are disabled")
+        return True, "Local development mode - billing disabled", {
+            "price_id": "local_dev",
+            "plan_name": "Local Development",
+            "minutes_limit": "no limit"
+        }
+        
+    allowed_models = await get_allowed_models_for_user(client, user_id)
+    resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
+    if resolved_model in allowed_models:
+        return True, "Model access allowed", allowed_models
     
-    # Original billing logic (commented out)
-    # if config.ENV_MODE == EnvMode.LOCAL:
-    #     logger.info("Running in local development mode - billing checks are disabled")
-    #     return True, "Local development mode - billing disabled", {
-    #         "price_id": "local_dev",
-    #         "plan_name": "Local Development",
-    #         "minutes_limit": "no limit"
-    #     }
-    #     
-    # allowed_models = await get_allowed_models_for_user(client, user_id)
-    # resolved_model = MODEL_NAME_ALIASES.get(model_name, model_name)
-    # if resolved_model in allowed_models:
-    #     return True, "Model access allowed", allowed_models
-    # 
-    # return False, f"Your current subscription plan does not include access to {model_name}. Please upgrade your subscription or choose from your available models: {', '.join(allowed_models)}", allowed_models
+    return False, f"Your current subscription plan does not include access to {model_name}. Please upgrade your subscription or choose from your available models: {', '.join(allowed_models)}", allowed_models
 
 async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optional[Dict]]:
     """
@@ -476,22 +467,13 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
     Returns:
         Tuple[bool, str, Optional[Dict]]: (can_run, message, subscription_info)
     """
-    # BILLING DISABLED: Always allow unlimited usage
-    logger.info("Billing checks disabled - allowing unlimited usage")
-    return True, "Billing disabled - unlimited usage allowed", {
-        "price_id": "billing_disabled",
-        "plan_name": "Unlimited Access",
-        "minutes_limit": "no limit"
-    }
-    
-    # Original billing logic (commented out)
-    # if config.ENV_MODE == EnvMode.LOCAL:
-    #     logger.info("Running in local development mode - billing checks are disabled")
-    #     return True, "Local development mode - billing disabled", {
-    #         "price_id": "local_dev",
-    #         "plan_name": "Local Development",
-    #         "minutes_limit": "no limit"
-    #     }
+    if config.ENV_MODE == EnvMode.LOCAL:
+        logger.info("Running in local development mode - billing checks are disabled")
+        return True, "Local development mode - billing disabled", {
+            "price_id": "local_dev",
+            "plan_name": "Local Development",
+            "minutes_limit": "no limit"
+        }
     
     # Get current subscription
     subscription = await get_user_subscription(user_id)

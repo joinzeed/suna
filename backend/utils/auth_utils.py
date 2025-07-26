@@ -195,12 +195,12 @@ async def get_user_id_from_stream_auth(
 
 async def verify_thread_access(client, thread_id: str, user_id: str):
     """
-    Verify that a user has access to a specific thread based on direct ownership.
+    Verify that a user has access to a specific thread based on account membership.
     
     Args:
         client: The Supabase client
         thread_id: The thread ID to check access for
-        user_id: The Clerk user ID to check permissions for
+        user_id: The user ID to check permissions for
         
     Returns:
         bool: True if the user has access
@@ -225,19 +225,12 @@ async def verify_thread_access(client, thread_id: str, user_id: str):
                 if project_result.data[0].get('is_public'):
                     return True
             
-        # Check if the user owns the thread directly (account_id should match user_id with Clerk)
         account_id = thread_data.get('account_id')
-        if account_id and account_id == user_id:
-            return True
-            
-        # Also check project ownership
-        if project_id:
-            project_result = await client.table('projects').select('account_id').eq('project_id', project_id).execute()
-            if project_result.data and len(project_result.data) > 0:
-                project_account_id = project_result.data[0].get('account_id')
-                if project_account_id and project_account_id == user_id:
-                    return True
-        
+        # When using service role, we need to manually check account membership instead of using current_user_account_role
+        if account_id:
+            account_user_result = await client.schema('basejump').from_('account_user').select('account_role').eq('user_id', user_id).eq('account_id', account_id).execute()
+            if account_user_result.data and len(account_user_result.data) > 0:
+                return True
         raise HTTPException(status_code=403, detail="Not authorized to access this thread")
     except HTTPException:
         # Re-raise HTTP exceptions as they are

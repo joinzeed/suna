@@ -142,14 +142,12 @@ allow_origin_regex = None
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.LOCAL:
     allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://localhost:3001")  # Add port 3001 for Zeed dashboard
     allowed_origins.append("http://34.142.105.100:3000")
 
 # Add staging-specific origins
 if config.ENV_MODE == EnvMode.STAGING:
     allowed_origins.append("https://staging.suna.so")
     allowed_origins.append("http://localhost:3000")
-    allowed_origins.append("http://localhost:3001")  # Add port 3001 for Zeed dashboard
     allowed_origins.append("http://34.142.105.100:3000")
     allow_origin_regex = r"https://suna-.*-prjcts\.vercel\.app"
 
