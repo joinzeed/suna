@@ -12,8 +12,7 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = [
   "python-dotenv==1.0.1",
-  "pydantic==2.11.7",
-  "pydantic-core==2.33.2",
+  "pydantic>=2.11.7",
   "litellm==1.72.2",
   "click==8.1.7",
   "questionary==2.0.1",

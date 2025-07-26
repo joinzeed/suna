@@ -70,6 +70,10 @@ fi
 # Sync directories
 if [ "$SYNC_BACKEND" == "true" ]; then
     sync_directory "backend" "Backend code"
+    # Also sync docker-compose.yaml when backend changes
+    echo -e "${YELLOW}Syncing docker-compose.yaml...${NC}"
+    gcloud compute scp docker-compose.yaml suna-instance:/opt/suna/docker-compose.yaml --zone=${ZONE}
+    echo -e "${GREEN}✓ docker-compose.yaml synced${NC}"
 fi
 
 if [ "$SYNC_FRONTEND" == "true" ]; then
