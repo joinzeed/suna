@@ -10,6 +10,7 @@ import React, {
 import { createClient } from '@/lib/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { checkAndInstallSunaAgent } from '@/lib/utils/install-suna-agent';
 
 type AuthContextType = {
   supabase: SupabaseClient;
@@ -29,34 +30,72 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const getInitialSession = async () => {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setIsLoading(false);
+      try {
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        console.log('🔵 Initial session check:', { hasSession: !!currentSession, user: !!currentSession?.user });
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+      } catch (error) {
+        console.error('❌ Error getting initial session:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     getInitialSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      async (event, newSession) => {
+        console.log('🔵 Auth state change:', { 
+          event, 
+          hasSession: !!newSession, 
+          hasUser: !!newSession?.user,
+          expiresAt: newSession?.expires_at 
+        });
+        
         setSession(newSession);
         setUser(newSession?.user ?? null);
-        // No need to set loading state here as initial load is done
-        // and subsequent changes shouldn't show a loading state for the whole app
+
         if (isLoading) setIsLoading(false);
+        
+        // Handle specific auth events
+        switch (event) {
+          case 'SIGNED_IN':
+            if (newSession?.user) {
+              console.log('✅ User signed in');
+              await checkAndInstallSunaAgent(newSession.user.id, newSession.user.created_at);
+            }
+            break;
+          case 'SIGNED_OUT':
+            console.log('✅ User signed out');
+            break;
+          case 'TOKEN_REFRESHED':
+            console.log('🔄 Token refreshed successfully');
+            break;
+          case 'MFA_CHALLENGE_VERIFIED':
+            console.log('✅ MFA challenge verified');
+            break;
+          default:
+            console.log(`🔵 Auth event: ${event}`);
+        }
       },
     );
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [supabase, isLoading]); // Added isLoading to dependencies to ensure it runs once after initial load completes
+  }, [supabase]); // Removed isLoading from dependencies to prevent infinite loops
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    // State updates will be handled by onAuthStateChange
+    try {
+      console.log('🔵 Signing out...');
+      await supabase.auth.signOut();
+      // State updates will be handled by onAuthStateChange
+    } catch (error) {
+      console.error('❌ Error signing out:', error);
+    }
   };
 
   const value = {
@@ -70,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
