@@ -256,19 +256,22 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                     "schema": json_schema,
                     "systemPrompt": "You are an expert financial news analyst specializing in LSEG regulatory announcements.",
                     "prompt": f"""
-                    Extract structured information from the LSEG regulatory news announcements displayed on this Investegate search results page.
+                    Extract structured information ONLY from the table within the div element with id="advanced-table-div".
                     
-                    IMPORTANT TIME FILTER: Only extract announcements published after 11:30 AM of {yesterday.strftime('%d %B %Y')}. 
+                    Look specifically for the HTML table with class="table-investegate" inside the advanced-table-div.
+                    IGNORE all other content on the page that is outside this specific table.
+                    
+                    IMPORTANT TIME FILTER: Only extract announcements published after 11:30 AM of {yesterday.strftime('%d %B %Y')}.
                     This includes announcements from yesterday after 11:30 AM and all announcements from today.
                     If you can see the time of publication, exclude any items published before 11:30 AM on {yesterday.strftime('%d %B %Y')}.
                     
-                    For each news item displayed, extract:
-                    - company: The exact company name
-                    - date: The release date 
-                    - time: The release time (if available)
-                    - headline: The full headline/title of the announcement
-                    - link: The full URL link to the news article
-                    - category: The type of announcement (e.g., "RNS", "Regulatory News", etc.)
+                    For each row in the table (excluding the header row), extract:
+                    - company: The exact company name from the "Company" column
+                    - date: The release date from the "Date" column
+                    - time: The release time (if available in the date/time information)
+                    - headline: The full headline/title from the "Announcement" column
+                    - link: The full URL link to the news article (if present in the announcement cell)
+                    - category: The type of announcement from the "Source" column (e.g., "RNS", "Regulatory News", etc.)
                     
                     Focus on announcements related to '{free_text}' and similar financial activities like equity issues, placements, fundraising, etc.
                     
@@ -280,6 +283,23 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                     - REITs and other investment vehicles
                     
                     Focus only on operating companies and businesses, not investment trusts or funds.
+                    
+                    IMPORTANT: If the table body is empty (no data rows) or no announcements match the criteria, return an empty array: []
+                    
+                    Process only the data within the table structure:
+                    <table class="table-investegate">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Company</th>
+                                <th>Source</th>
+                                <th>Announcement</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Extract data from rows here -->
+                        </tbody>
+                    </table>
                     """
                 }
             }
@@ -293,9 +313,15 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
 
                     result = await response.json()
 
-                    if result.get('success') and result.get('data', {}).get('json'):
+                    if result.get('success') and result.get('data', {}):
                         raw_data = result['data']['json']
-
+                        if not raw_data:
+                            logging.info(f"No LSEG news items found matching '{free_text}'")
+                            return ToolResult(
+                                success=True,
+                                output=json.dumps([], ensure_ascii=False, indent=2)
+                            )
+                        
                         # Format the data to match the expected structure
                         formatted_results = []
                         for item in raw_data:
@@ -377,40 +403,40 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             'Authorization': f'Bearer {self.firecrawl_api_key}'
         }
 
-        json_schema = {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "company": {
-                        "type": "string",
-                        "description": "The name of the company"
-                    },
-                    "released_date": {
-                        "type": "string",
-                        "format": "date",
-                        "description": "The date when the news was released (YYYY-MM-DD format)"
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "The title of the news announcement"
-                    },
-                    "topic": {
-                        "type": "string",
-                        "description": "The main topic or category of the announcement (e.g., placement, rights issue, share buyback, etc.)"
-                    },
-                    "industry": {
-                        "type": "string",
-                        "description": "The industry sector of the company"
-                    },
-                    "link": {
-                        "type": "string",
-                        "description": "The link to the news article"
-                    }
-                },
-                "required": ["company", "released_date", "title", "topic", "industry", 'link']
-            }
-        }
+        # json_schema = {
+        #     "type": "array",
+        #     "items": {
+        #         "type": "object",
+        #         "properties": {
+        #             "company": {
+        #                 "type": "string",
+        #                 "description": "The name of the company"
+        #             },
+        #             "released_date": {
+        #                 "type": "string",
+        #                 "format": "date",
+        #                 "description": "The date when the news was released (YYYY-MM-DD format)"
+        #             },
+        #             "title": {
+        #                 "type": "string",
+        #                 "description": "The title of the news announcement"
+        #             },
+        #             "topic": {
+        #                 "type": "string",
+        #                 "description": "The main topic or category of the announcement (e.g., placement, rights issue, share buyback, etc.)"
+        #             },
+        #             "industry": {
+        #                 "type": "string",
+        #                 "description": "The industry sector of the company"
+        #             },
+        #             "link": {
+        #                 "type": "string",
+        #                 "description": "The link to the news article"
+        #             }
+        #         },
+        #         "required": ["company", "released_date", "title", "topic", "industry", 'link']
+        #     }
+        # }
         
         # Get today and yesterday dates for filtering
         today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -420,7 +446,7 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
         payload = {
             "url": "https://live.euronext.com/en/products/equities/company-news#regulated-news",
             "formats": ["json"],
-            "timeout": 60000,
+            "timeout": 90000,
             "actions": [
                 {"type": "wait", "milliseconds": 2000},
 
@@ -433,12 +459,12 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                 {"type": "wait", "milliseconds": 3000}
             ],
             "jsonOptions": {
-                "schema": json_schema,
-                "systemPrompt": "You are an expert financial news analyst. Extract structured information from Euronext regulatory news announcements.",
+                # "schema": json_schema,
+                # "systemPrompt": "You are an expert financial news analyst. Extract structured information from Euronext regulatory news announcements.",
                 "prompt": f"""
                 Extract structured information from the financial news announcements displayed on this page.
                 IMPORTANT: Only include news items that were released on {today} or {yesterday}.
-                
+
                 For each relevant news item, extract:
                 - company: The exact company name
                 - released_date: The release date in YYYY-MM-DD format
@@ -446,9 +472,25 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                 - topic: Categorize the announcement
                 - industry: The industry sector of the company
                 - link: The link to the news article
-                Return only items from {yesterday} and {today}.
+
+                Return the results as a JSON array of objects. Each object should contain the fields: company, released_date, title, topic, industry, and link.
+                Only include items from {yesterday} and {today}
+
+                If there are no items from {yesterday} and {today}, return an empty array: []
+
+                Example format:
+                [
+                {{
+                    'company': 'Example Corp',
+                    'released_date': '2024-01-15',
+                    'title': 'Example Corp Reports Q4 Earnings',
+                    'topic': 'Earnings',
+                    'industry': 'Technology',
+                    'link': 'https://example.com/news/123'
+                }}
+                ]
                 """
-            }
+                }
         }
 
         try:

@@ -14,7 +14,7 @@ import os
 from agentpress.thread_manager import ThreadManager
 from services.supabase import DBConnection
 from services import redis
-from utils.auth_utils import get_current_user_id_from_jwt, get_user_id_from_stream_auth, verify_thread_access, verify_admin_api_key
+from utils.auth_utils import get_current_user_id_from_jwt, get_current_user_context_from_jwt, UserContext, get_user_id_from_stream_auth, verify_thread_access, verify_admin_api_key
 from utils.logger import logger, structlog
 from services.billing import check_billing_status, can_use_model
 from utils.config import config
@@ -257,10 +257,14 @@ async def get_agent_run_with_access_check(client, agent_run_id: str, user_id: st
 @router.post("/thread/{thread_id}/agent/start")
 async def start_agent(
     thread_id: str,
+    request: Request,
     body: AgentStartRequest = Body(...),
-    user_id: str = Depends(get_current_user_id_from_jwt)
 ):
     """Start an agent for a specific thread in the background."""
+    # Extract full user context including organization information
+    user_context = await get_current_user_context_from_jwt(request)
+    user_id = user_context.user_id
+    
     structlog.contextvars.bind_contextvars(
         thread_id=thread_id,
     )
@@ -466,6 +470,7 @@ async def start_agent(
         is_agent_builder=is_agent_builder,
         target_agent_id=target_agent_id,
         request_id=request_id,
+        user_context=user_context.to_dict(),  # Pass user context
     )
 
     return {"agent_run_id": agent_run_id, "status": "running"}
@@ -878,6 +883,7 @@ async def generate_and_update_project_name(project_id: str, prompt: str):
 
 @router.post("/agent/initiate", response_model=InitiateAgentResponse)
 async def initiate_agent_with_files(
+    request: Request,
     prompt: str = Form(...),
     model_name: Optional[str] = Form(None),  # Default to None to use config.MODEL_TO_USE
     enable_thinking: Optional[bool] = Form(False),
@@ -888,9 +894,12 @@ async def initiate_agent_with_files(
     files: List[UploadFile] = File(default=[]),
     is_agent_builder: Optional[bool] = Form(False),
     target_agent_id: Optional[str] = Form(None),
-    user_id: str = Depends(get_current_user_id_from_jwt)
 ):
     """Initiate a new agent session with optional file attachments."""
+    # Extract full user context including organization information
+    user_context = await get_current_user_context_from_jwt(request)
+    user_id = user_context.user_id
+    
     global instance_id # Ensure instance_id is accessible
     if not instance_id:
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
@@ -1194,6 +1203,7 @@ async def initiate_agent_with_files(
             is_agent_builder=is_agent_builder,
             target_agent_id=target_agent_id,
             request_id=request_id,
+            user_context=user_context.to_dict(),  # Pass user context
         )
 
         return {"thread_id": thread_id, "agent_run_id": agent_run_id}
