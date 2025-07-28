@@ -1,24 +1,38 @@
 import sentry
 from fastapi import HTTPException, Request, Header
-from typing import Optional
+from typing import Optional, Dict, Any
 import jwt
 from jwt.exceptions import PyJWTError
 from utils.logger import structlog
 from utils.config import config
 
-# This function extracts the user ID from Clerk JWT (via Supabase integration)
-async def get_current_user_id_from_jwt(request: Request) -> str:
+# User context data structure
+class UserContext:
+    def __init__(self, user_id: str, organization_id: Optional[str] = None, organization_name: Optional[str] = None):
+        self.user_id = user_id
+        self.organization_id = organization_id
+        self.organization_name = organization_name
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "organization_id": self.organization_id,
+            "organization_name": self.organization_name
+        }
+
+# Enhanced function to extract full user context from Clerk JWT
+async def get_current_user_context_from_jwt(request: Request) -> UserContext:
     """
-    Extract and verify the user ID from the Clerk JWT in the Authorization header.
+    Extract and verify the user context from the Clerk JWT in the Authorization header.
     
     Thanks to the Supabase-Clerk integration, Clerk JWTs are automatically verified
-    by Supabase, so we just need to extract the Clerk user ID from the 'sub' claim.
+    by Supabase, so we just need to extract the user and organization info from claims.
     
     Args:
         request: The FastAPI request object
         
     Returns:
-        str: The Clerk user ID extracted from the JWT (format: user_xxxxx)
+        UserContext: Object containing user_id, organization_id, and organization_name
         
     Raises:
         HTTPException: If no valid token is found or if the token is invalid
@@ -37,7 +51,6 @@ async def get_current_user_id_from_jwt(request: Request) -> str:
     try:
         # Decode without verification since Supabase handles verification via Clerk integration
         payload = jwt.decode(token, options={"verify_signature": False})
-        
         # Extract Clerk user ID from 'sub' claim
         clerk_user_id = payload.get('sub')
         
@@ -56,12 +69,37 @@ async def get_current_user_id_from_jwt(request: Request) -> str:
                 headers={"WWW-Authenticate": "Bearer"}
             )
 
-        # Set user context for logging and monitoring
-        sentry.sentry.set_user({ "id": clerk_user_id })
-        structlog.contextvars.bind_contextvars(
-            user_id=clerk_user_id
+        # Extract organization information from Clerk JWT
+        # Clerk typically puts organization info in the 'org_id' and 'org_slug' claims
+        organization_id = payload.get('org_id')  # Organization ID
+        organization_name = payload.get('org_slug') or payload.get('org_name')  # Organization name/slug
+        
+        # Create user context object
+        user_context = UserContext(
+            user_id=clerk_user_id,
+            organization_id=organization_id,
+            organization_name=organization_name
         )
-        return clerk_user_id
+
+        # Set user context for logging and monitoring
+        sentry_user_data = {"id": clerk_user_id}
+        if organization_id:
+            sentry_user_data["organization_id"] = organization_id
+        if organization_name:
+            sentry_user_data["organization_name"] = organization_name
+            
+        sentry.sentry.set_user(sentry_user_data)
+        
+        # Bind context variables for structured logging
+        context_vars = {"user_id": clerk_user_id}
+        if organization_id:
+            context_vars["organization_id"] = organization_id
+        if organization_name:
+            context_vars["organization_name"] = organization_name
+            
+        structlog.contextvars.bind_contextvars(**context_vars)
+        
+        return user_context
         
     except PyJWTError:
         raise HTTPException(
@@ -69,6 +107,25 @@ async def get_current_user_id_from_jwt(request: Request) -> str:
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+# This function extracts the user ID from Clerk JWT (via Supabase integration)
+async def get_current_user_id_from_jwt(request: Request) -> str:
+    """
+    Extract and verify the user ID from the Clerk JWT in the Authorization header.
+    
+    This is a wrapper around get_current_user_context_from_jwt for backward compatibility.
+    
+    Args:
+        request: The FastAPI request object
+        
+    Returns:
+        str: The Clerk user ID extracted from the JWT (format: user_xxxxx)
+        
+    Raises:
+        HTTPException: If no valid token is found or if the token is invalid
+    """
+    user_context = await get_current_user_context_from_jwt(request)
+    return user_context.user_id
 
 # Legacy function name for backward compatibility
 async def get_current_user_id(request: Request) -> str:

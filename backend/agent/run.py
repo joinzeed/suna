@@ -52,7 +52,8 @@ async def run_agent(
     agent_config: Optional[dict] = None,    
     trace: Optional[StatefulTraceClient] = None,
     is_agent_builder: Optional[bool] = False,
-    target_agent_id: Optional[str] = None
+    target_agent_id: Optional[str] = None,
+    user_context: Optional[dict] = None  # Add user context parameter
 ):
     """Run the development agent with specified configuration."""
     logger.info(f"🚀 Starting agent with model: {model_name}")
@@ -271,6 +272,21 @@ async def run_agent(
     else:
         # Use the original prompt - the LLM can only use tools that are registered
         default_system_content = get_system_prompt()
+    
+    # Add user context information to system prompt if available
+    if user_context:
+        context_info = []
+        if user_context.get('user_id'):
+            context_info.append(f"User ID: {user_context['user_id']}")
+        if user_context.get('organization_id'):
+            context_info.append(f"Organization ID: {user_context['organization_id']}")
+        if user_context.get('organization_name'):
+            context_info.append(f"Organization: {user_context['organization_name']}")
+        
+        if context_info:
+            user_context_prompt = "\n\nUser Context:\n" + "\n".join(context_info)
+            default_system_content = default_system_content + user_context_prompt
+            logger.info(f"Added user context to system prompt: {context_info}")
         
     # Add sample response for non-anthropic models
     if "anthropic" not in model_name.lower():
@@ -285,9 +301,39 @@ async def run_agent(
         # Completely replace the default system prompt with the custom one
         # This prevents confusion and tool hallucination
         system_content = custom_system_prompt
+        
+        # Add user context to custom system prompt as well
+        if user_context:
+            context_info = []
+            if user_context.get('user_id'):
+                context_info.append(f"User ID: {user_context['user_id']}")
+            if user_context.get('organization_id'):
+                context_info.append(f"Organization ID: {user_context['organization_id']}")
+            if user_context.get('organization_name'):
+                context_info.append(f"Organization: {user_context['organization_name']}")
+            
+            if context_info:
+                user_context_prompt = "\n\nUser Context:\n" + "\n".join(context_info)
+                system_content = system_content + user_context_prompt
+        
         logger.info(f"Using ONLY custom agent system prompt for: {agent_config.get('name', 'Unknown')}")
     elif is_agent_builder:
         system_content = get_agent_builder_prompt()
+        
+        # Add user context to agent builder prompt as well
+        if user_context:
+            context_info = []
+            if user_context.get('user_id'):
+                context_info.append(f"User ID: {user_context['user_id']}")
+            if user_context.get('organization_id'):
+                context_info.append(f"Organization ID: {user_context['organization_id']}")
+            if user_context.get('organization_name'):
+                context_info.append(f"Organization: {user_context['organization_name']}")
+            
+            if context_info:
+                user_context_prompt = "\n\nUser Context:\n" + "\n".join(context_info)
+                system_content = system_content + user_context_prompt
+        
         logger.info("Using agent builder system prompt")
     else:
         # Use just the default system prompt

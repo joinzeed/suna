@@ -66,14 +66,26 @@ async def run_agent_background(
     is_agent_builder: Optional[bool] = False,
     target_agent_id: Optional[str] = None,
     request_id: Optional[str] = None,
+    user_context: Optional[dict] = None,  # Add user context parameter
 ):
     """Run the agent in the background using Redis for state."""
     structlog.contextvars.clear_contextvars()
-    structlog.contextvars.bind_contextvars(
-        agent_run_id=agent_run_id,
-        thread_id=thread_id,
-        request_id=request_id,
-    )
+    # Bind context variables including organization information
+    context_vars = {
+        "agent_run_id": agent_run_id,
+        "thread_id": thread_id,
+        "request_id": request_id,
+    }
+    
+    # Add user context if provided
+    if user_context:
+        context_vars["user_id"] = user_context.get("user_id")
+        if user_context.get("organization_id"):
+            context_vars["organization_id"] = user_context.get("organization_id")
+        if user_context.get("organization_name"):
+            context_vars["organization_name"] = user_context.get("organization_name")
+    
+    structlog.contextvars.bind_contextvars(**context_vars)
 
     try:
         await initialize()
@@ -181,7 +193,8 @@ async def run_agent_background(
             agent_config=agent_config,
             trace=trace,
             is_agent_builder=is_agent_builder,
-            target_agent_id=target_agent_id
+            target_agent_id=target_agent_id,
+            user_context=user_context  # Pass user context to agent
         )
 
         final_status = "running"
