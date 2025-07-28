@@ -236,7 +236,7 @@ class Configuration:
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"
 
     # Admin API key for server-side operations
-    ADMIN_API_KEY: Optional[str] = None
+    KORTIX_ADMIN_API_KEY: Optional[str] = None
     
     # Finviz configuration
     FINVIZ_ELITE_EMAIL: Optional[str] = None

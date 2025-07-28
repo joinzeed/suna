@@ -153,8 +153,8 @@ def _generate_model_structures():
         elif model_name.startswith("openrouter/qwen/"):
             legacy_name = model_name.replace("openrouter/", "")
             pricing[legacy_name] = config["pricing"]
-        elif model_name.startswith("openrouter/google/"):
-            legacy_name = model_name.replace("openrouter/", "")
+        elif model_name.startswith("gemini/"):
+            legacy_name = model_name.replace("gemini/", "")
             pricing[legacy_name] = config["pricing"]
         elif model_name.startswith("anthropic/"):
             # Add anthropic/claude-sonnet-4 alias for claude-sonnet-4-20250514

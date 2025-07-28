@@ -130,6 +130,7 @@ def load_existing_env_vars():
             "ANTHROPIC_API_KEY": backend_env.get("ANTHROPIC_API_KEY", ""),
             "OPENROUTER_API_KEY": backend_env.get("OPENROUTER_API_KEY", ""),
             "MORPH_API_KEY": backend_env.get("MORPH_API_KEY", ""),
+            "GEMINI_API_KEY": backend_env.get("GEMINI_API_KEY", ""),
             "MODEL_TO_USE": backend_env.get("MODEL_TO_USE", ""),
             "GOOGLE_API_KEY": backend_env.get("GOOGLE_API_KEY", ""),
         },
@@ -686,7 +687,7 @@ class SetupWizard:
             )
         else:
             print_info(
-                "Suna requires at least one LLM provider. Supported: OpenAI, Anthropic, OpenRouter."
+                "Suna requires at least one LLM provider. Supported: OpenAI, Anthropic, Google Gemini, OpenRouter."
             )
 
         # Don't clear existing keys if we're updating
@@ -705,8 +706,8 @@ class SetupWizard:
             providers = {
                 "1": ("OpenAI", "OPENAI_API_KEY"),
                 "2": ("Anthropic", "ANTHROPIC_API_KEY"),
-                "3": ("OpenRouter", "OPENROUTER_API_KEY"),
-                "4": ("Google Gemini (official)", "GOOGLE_API_KEY"),
+                "3": ("Google Gemini", "GEMINI_API_KEY"),
+                "4": ("OpenRouter", "OPENROUTER_API_KEY"),
             }
             print(
                 f"\n{Colors.CYAN}Select LLM providers to configure (e.g., 1,3,4):{Colors.ENDC}"
@@ -753,9 +754,17 @@ class SetupWizard:
             elif self.env_vars["llm"].get("OPENAI_API_KEY"):
                 self.env_vars["llm"]["MODEL_TO_USE"] = "openai/gpt-4o"
             elif self.env_vars["llm"].get("ANTHROPIC_API_KEY"):
-                self.env_vars["llm"]["MODEL_TO_USE"] = "anthropic/claude-sonnet-4-20250514"
-            # elif self.env_vars["llm"].get("OPENROUTER_API_KEY"):
-            #     self.env_vars["llm"]["MODEL_TO_USE"] = "openrouter/google/gemini-flash-1.5"
+                self.env_vars["llm"][
+                    "MODEL_TO_USE"
+                ] = "anthropic/claude-sonnet-4-20250514"
+            elif self.env_vars["llm"].get("GEMINI_API_KEY"):
+                self.env_vars["llm"][
+                    "MODEL_TO_USE"
+                ] = "gemini/gemini-2.5-pro"
+            elif self.env_vars["llm"].get("OPENROUTER_API_KEY"):
+                self.env_vars["llm"][
+                    "MODEL_TO_USE"
+                ] = "openrouter/google/gemini-2.5-pro"
 
         print_success(
             f"LLM keys saved. Default model: {self.env_vars['llm'].get('MODEL_TO_USE', 'Not set')}"

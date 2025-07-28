@@ -38,8 +38,6 @@ from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
 
 load_dotenv()
 
-
-
 async def run_agent(
     thread_id: str,
     project_id: str,
