@@ -130,6 +130,7 @@ def load_existing_env_vars():
             "ANTHROPIC_API_KEY": backend_env.get("ANTHROPIC_API_KEY", ""),
             "OPENROUTER_API_KEY": backend_env.get("OPENROUTER_API_KEY", ""),
             "MORPH_API_KEY": backend_env.get("MORPH_API_KEY", ""),
+            "GEMINI_API_KEY": backend_env.get("GEMINI_API_KEY", ""),
             "MODEL_TO_USE": backend_env.get("MODEL_TO_USE", ""),
             "GOOGLE_API_KEY": backend_env.get("GOOGLE_API_KEY", ""),
         },
@@ -686,7 +687,7 @@ class SetupWizard:
             )
         else:
             print_info(
-                "Suna requires at least one LLM provider. Supported: OpenAI, Anthropic, OpenRouter."
+                "Suna requires at least one LLM provider. Supported: OpenAI, Anthropic, Google Gemini, OpenRouter."
             )
 
         # Don't clear existing keys if we're updating
