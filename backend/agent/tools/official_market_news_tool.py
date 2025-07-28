@@ -376,41 +376,6 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {self.firecrawl_api_key}'
         }
-
-        json_schema = {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "company": {
-                        "type": "string",
-                        "description": "The name of the company"
-                    },
-                    "released_date": {
-                        "type": "string",
-                        "format": "date",
-                        "description": "The date when the news was released (YYYY-MM-DD format)"
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "The title of the news announcement"
-                    },
-                    "topic": {
-                        "type": "string",
-                        "description": "The main topic or category of the announcement (e.g., placement, rights issue, share buyback, etc.)"
-                    },
-                    "industry": {
-                        "type": "string",
-                        "description": "The industry sector of the company"
-                    },
-                    "link": {
-                        "type": "string",
-                        "description": "The link to the news article"
-                    }
-                },
-                "required": ["company", "released_date", "title", "topic", "industry", 'link']
-            }
-        }
         
         # Get today and yesterday dates for filtering
         today = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -420,7 +385,7 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
         payload = {
             "url": "https://live.euronext.com/en/products/equities/company-news#regulated-news",
             "formats": ["json"],
-            "timeout": 60000,
+            "timeout": 90000,
             "actions": [
                 {"type": "wait", "milliseconds": 2000},
 
@@ -433,12 +398,10 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                 {"type": "wait", "milliseconds": 3000}
             ],
             "jsonOptions": {
-                "schema": json_schema,
-                "systemPrompt": "You are an expert financial news analyst. Extract structured information from Euronext regulatory news announcements.",
                 "prompt": f"""
                 Extract structured information from the financial news announcements displayed on this page.
                 IMPORTANT: Only include news items that were released on {today} or {yesterday}.
-                
+
                 For each relevant news item, extract:
                 - company: The exact company name
                 - released_date: The release date in YYYY-MM-DD format
@@ -446,7 +409,21 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
                 - topic: Categorize the announcement
                 - industry: The industry sector of the company
                 - link: The link to the news article
-                Return only items from {yesterday} and {today}.
+
+                Return the results as a JSON array of objects. Each object should contain the fields: company, released_date, title, topic, industry, and link.
+                Only include items from {yesterday} and {today}.
+
+                Example format:
+                [
+                {{
+                    'company': 'Example Corp',
+                    'released_date': '2024-01-15',
+                    'title': 'Example Corp Reports Q4 Earnings',
+                    'topic': 'Earnings',
+                    'industry': 'Technology',
+                    'link': 'https://example.com/news/123'
+                }}
+                ]
                 """
             }
         }
