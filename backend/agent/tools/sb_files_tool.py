@@ -1,12 +1,13 @@
 from agentpress.tool import ToolResult, openapi_schema, xml_schema
-from sandbox.tool_base import SandboxToolsBase    
+from sandbox.tool_base import SandboxToolsBase
 from utils.files_utils import should_exclude_file, clean_path
 from agentpress.thread_manager import ThreadManager
 from utils.logger import logger
 from utils.config import config
 import os
 import json
-import httpx
+import litellm
+import openai
 import asyncio
 from typing import Optional
 
@@ -167,7 +168,7 @@ class SandboxFilesTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "str_replace",
-            "description": "Replace specific text in a file. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Use this when you need to replace a unique string that appears exactly once in the file.",
+            "description": "Replace specific text in a file. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). IMPORTANT: Prefer using edit_file for faster, shorter edits to avoid repetition. Only use this tool when you need to replace a unique string that appears exactly once in the file and edit_file is not suitable.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -251,7 +252,7 @@ class SandboxFilesTool(SandboxToolsBase):
         "type": "function",
         "function": {
             "name": "full_file_rewrite",
-            "description": "Completely rewrite an existing file with new content. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Use this when you need to replace the entire file content or make extensive changes throughout the file.",
+            "description": "Completely rewrite an existing file with new content. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). IMPORTANT: Always prefer using edit_file for making changes to code. Only use this tool when edit_file fails or when you need to replace the entire file content.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -410,6 +411,25 @@ class SandboxFilesTool(SandboxToolsBase):
             {"param_name": "output_file_path", "node_type": "attribute", "path": "."}
         ],
         example='''
+        <!-- Example: Mark multiple scattered tasks as complete in a todo list -->
+        <function_calls>
+        <invoke name="edit_file">
+        <parameter name="target_file">todo.md</parameter>
+        <parameter name="instructions">I am marking the research and setup tasks as complete in my todo list.</parameter>
+        <parameter name="code_edit">
+// ... existing code ...
+- [x] Research topic A
+- [ ] Research topic B
+- [x] Research topic C
+// ... existing code ...
+- [x] Setup database
+- [x] Configure server
+// ... existing code ...
+        </parameter>
+        </invoke>
+        </function_calls>
+
+        <!-- Example: Add error handling and logging to a function -->
         <function_calls>
         <invoke name="copy_supabase_field_to_file">
         <parameter name="table_name">users</parameter>
@@ -559,4 +579,3 @@ class SandboxFilesTool(SandboxToolsBase):
     #         return self.fail_response(f"File '{file_path}' appears to be binary and cannot be read as text")
     #     except Exception as e:
     #         return self.fail_response(f"Error reading file: {str(e)}")
-
