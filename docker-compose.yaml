@@ -31,7 +31,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.alternative
     platform: linux/amd64
     ports:
       - "8000:8000"
@@ -60,7 +60,7 @@ services:
   worker:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.alternative
     platform: linux/amd64
     command: uv run dramatiq --skip-logging --processes 1 --threads 4 run_agent_background
     volumes:
