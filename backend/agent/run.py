@@ -35,6 +35,8 @@ from agent.tools.finviz_tool import SandboxFinvizTool
 from agent.tools.campaign_management_tool import CampaignManagementTool
 from agent.tools.wait_tool import WaitTool
 from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
+from agent.tools.pdf_convert_tool import SandboxPDFConvertTool
+from agent.tools.template_fetch_tool import TemplateFetchTool
 
 load_dotenv()
 
@@ -145,6 +147,7 @@ async def run_agent(
         thread_manager.add_tool(MessageTool)
         thread_manager.add_tool(SandboxWebSearchTool, project_id=project_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
+        thread_manager.add_tool(SandboxPDFConvertTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxImageEditTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
         thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=project_id, thread_manager=thread_manager)
@@ -152,6 +155,7 @@ async def run_agent(
             thread_manager.add_tool(DataProvidersTool)
         thread_manager.add_tool(CampaignManagementTool)
         thread_manager.add_tool(WaitTool)
+        thread_manager.add_tool(TemplateFetchTool)
     else:
         logger.info("Custom agent specified - registering only enabled tools")
         
@@ -167,14 +171,14 @@ async def run_agent(
             try:
                 if not isinstance(enabled_tools, dict):
                     logger.error(f"enabled_tools is {type(enabled_tools)} at tool check for {tool_name}")
-                    return False
+                    return True  # Default to enabled if config is invalid
                 tool_config = enabled_tools.get(tool_name, {})
                 if not isinstance(tool_config, dict):
-                    return bool(tool_config) if isinstance(tool_config, bool) else False
-                return tool_config.get('enabled', False)
+                    return bool(tool_config) if isinstance(tool_config, bool) else True  # Default to enabled
+                return tool_config.get('enabled', True)  # Default to enabled for backward compatibility
             except Exception as e:
                 logger.error(f"Exception in tool check for {tool_name}: {e}")
-                return False
+                return True  # Default to enabled on error
         
         if safe_tool_check('sb_shell_tool'):
             thread_manager.add_tool(SandboxShellTool, project_id=project_id, thread_manager=thread_manager)
@@ -192,10 +196,14 @@ async def run_agent(
             thread_manager.add_tool(SandboxVisionTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
         if config.RAPID_API_KEY and safe_tool_check('data_providers_tool'):
             thread_manager.add_tool(DataProvidersTool)
-        if enabled_tools.get('finviz_tool', {}).get('enabled', False):
+        if safe_tool_check('finviz_tool'):
             thread_manager.add_tool(SandboxFinvizTool, project_id=project_id, thread_manager=thread_manager)
-        if enabled_tools.get('official_market_news_tool', {}).get('enabled', False):
+        if safe_tool_check('official_market_news_tool'):
             thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=project_id, thread_manager=thread_manager)
+        if safe_tool_check('pdf_convert_tool'):
+            thread_manager.add_tool(SandboxPDFConvertTool, project_id=project_id, thread_id=thread_id, thread_manager=thread_manager)
+        if safe_tool_check('template_fetch_tool'):
+            thread_manager.add_tool(TemplateFetchTool)
 
     # Register MCP tool wrapper if agent has configured MCPs or custom MCPs
     mcp_wrapper_instance = None
@@ -281,7 +289,7 @@ async def run_agent(
                     # Log all registered tools for debugging
                     all_tools = list(thread_manager.tool_registry.tools.keys())
                     logger.info(f"All registered tools after MCP initialization: {all_tools}")
-                    mcp_tools = [tool for tool in all_tools if tool not in ['call_mcp_tool', 'sb_files_tool', 'message_tool', 'expand_msg_tool', 'web_search_tool', 'sb_shell_tool', 'sb_vision_tool', 'sb_browser_tool', 'computer_use_tool', 'data_providers_tool', 'sb_deploy_tool', 'sb_expose_tool', 'update_agent_tool']]
+                    mcp_tools = [tool for tool in all_tools if tool not in ['call_mcp_tool', 'sb_files_tool', 'message_tool', 'expand_msg_tool', 'web_search_tool', 'sb_shell_tool', 'sb_vision_tool', 'sb_browser_tool', 'computer_use_tool', 'data_providers_tool', 'sb_deploy_tool', 'sb_expose_tool', 'update_agent_tool', 'pdf_convert_tool']]
                     logger.info(f"MCP tools registered: {mcp_tools}")
                 
                 except Exception as e:
