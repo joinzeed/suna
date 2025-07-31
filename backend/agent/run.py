@@ -208,7 +208,7 @@ class PromptManager:
                                   is_agent_builder: bool, thread_id: str, 
                                   mcp_wrapper_instance: Optional[MCPToolWrapper]) -> dict:
         
-        if "gemini-2.5-flash" in model_name.lower() and "gemini-2.5-pro" not in model_name.lower():
+        if "gemini-2.5-flash" in model_name.lower() or "gemini-2.5-pro" in model_name.lower():
             default_system_content = get_gemini_system_prompt()
         else:
             default_system_content = get_system_prompt()
