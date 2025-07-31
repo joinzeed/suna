@@ -1,4 +1,4 @@
-from agentpress.tool import ToolResult, openapi_schema, xml_schema
+from agentpress.tool import ToolResult, openapi_schema, usage_example
 from sandbox.tool_base import SandboxToolsBase
 from utils.files_utils import should_exclude_file, clean_path
 from agentpress.thread_manager import ThreadManager
@@ -103,13 +103,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="create-file",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "file_contents", "node_type": "content", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="create_file">
         <parameter name="file_path">src/main.py</parameter>
@@ -123,8 +117,7 @@ class SandboxFilesTool(SandboxToolsBase):
         </parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def create_file(self, file_path: str, file_contents: str, permissions: str = "644") -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -189,14 +182,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="str-replace",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "old_str", "node_type": "element", "path": "old_str"},
-            {"param_name": "new_str", "node_type": "element", "path": "new_str"}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="str_replace">
         <parameter name="file_path">src/main.py</parameter>
@@ -204,8 +190,7 @@ class SandboxFilesTool(SandboxToolsBase):
         <parameter name="new_str">replacement text that will be inserted instead</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def str_replace(self, file_path: str, old_str: str, new_str: str) -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -274,13 +259,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="full-file-rewrite",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "file_contents", "node_type": "content", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="full_file_rewrite">
         <parameter name="file_path">src/main.py</parameter>
@@ -292,8 +271,7 @@ class SandboxFilesTool(SandboxToolsBase):
         </parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def full_file_rewrite(self, file_path: str, file_contents: str, permissions: str = "644") -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -340,19 +318,13 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="delete-file",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="delete_file">
         <parameter name="file_path">src/main.py</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def delete_file(self, file_path: str) -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -401,16 +373,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="copy-supabase-field-to-file",
-        mappings=[
-            {"param_name": "table_name", "node_type": "attribute", "path": "."},
-            {"param_name": "field_name", "node_type": "attribute", "path": "."},
-            {"param_name": "primary_key", "node_type": "attribute", "path": "."},
-            {"param_name": "primary_key_value", "node_type": "attribute", "path": "."},
-            {"param_name": "output_file_path", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <!-- Example: Mark multiple scattered tasks as complete in a todo list -->
         <function_calls>
         <invoke name="edit_file">
@@ -439,8 +402,7 @@ class SandboxFilesTool(SandboxToolsBase):
         <parameter name="output_file_path">output/email.txt</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def copy_supabase_field_to_file(self, table_name: str, field_name: str, primary_key: str, primary_key_value: str, output_file_path: str) -> ToolResult:
         """Copy the value of a single field from a single row (by primary key) of a Supabase table in the job Supabase database into a file in the sandbox."""
         try:
