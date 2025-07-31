@@ -124,6 +124,8 @@ celerybeat.pid
 
 # Environments
 .env
+.env_YZ
+.env_production
 .venv
 env/
 venv/
@@ -205,3 +207,4 @@ dump.rdb
 
 # CodeWebChat state and logs (auto-added)
 .cwc/
+
