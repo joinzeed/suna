@@ -168,6 +168,7 @@ async def run_agent_background(
             stop_signal_received = True # Stop the run if the checker fails
 
     trace = langfuse.trace(name="agent_run", id=agent_run_id, session_id=thread_id, metadata={"project_id": project_id, "instance_id": instance_id})
+    pending_redis_operations = []  # Initialize here to avoid UnboundLocalError
     try:
         # Setup Pub/Sub listener for control signals
         pubsub = await redis.create_pubsub()
@@ -199,8 +200,6 @@ async def run_agent_background(
 
         final_status = "running"
         error_message = None
-
-        pending_redis_operations = []
 
         async for response in agent_gen:
             if stop_signal_received:

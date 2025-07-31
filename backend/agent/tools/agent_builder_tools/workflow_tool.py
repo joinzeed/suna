@@ -1,6 +1,6 @@
 import json
 from typing import Optional, Dict, Any, List
-from agentpress.tool import ToolResult, openapi_schema, xml_schema
+from agentpress.tool import ToolResult, openapi_schema, usage_example
 from agentpress.thread_manager import ThreadManager
 from .base_tool import AgentBuilderBaseTool
 from utils.logger import logger
@@ -23,14 +23,15 @@ class WorkflowTool(AgentBuilderBaseTool):
             version_data = None
             if agent_data.get('current_version_id'):
                 try:
-                    from agent.versioning.facade import version_manager
+                    from agent.versioning.version_service import get_version_service
                     account_id = await self._get_current_account_id()
-                    version_dict = await version_manager.get_version(
+                    version_service = await get_version_service()
+                    version_obj = await version_service.get_version(
                         agent_id=self.agent_id,
                         version_id=agent_data['current_version_id'],
                         user_id=account_id
                     )
-                    version_data = version_dict
+                    version_data = version_obj.to_dict()
                 except Exception as e:
                     logger.warning(f"Failed to get version data for workflow tool: {e}")
             
@@ -178,17 +179,7 @@ class WorkflowTool(AgentBuilderBaseTool):
             }
         }
     })
-    @xml_schema(
-        tag_name="create-workflow",
-        mappings=[
-            {"param_name": "name", "node_type": "attribute", "path": ".", "required": True},
-            {"param_name": "description", "node_type": "element", "path": "description", "required": False},
-            {"param_name": "trigger_phrase", "node_type": "element", "path": "trigger_phrase", "required": False},
-            {"param_name": "is_default", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "validate_tools", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "steps", "node_type": "element", "path": "steps", "required": True}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="create_workflow">
         <parameter name="name">Research and Report</parameter>
@@ -219,8 +210,7 @@ class WorkflowTool(AgentBuilderBaseTool):
         ]</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def create_workflow(
         self,
         name: str,
@@ -296,19 +286,13 @@ class WorkflowTool(AgentBuilderBaseTool):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-workflows",
-        mappings=[
-            {"param_name": "include_steps", "node_type": "attribute", "path": ".", "required": False}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="get_workflows">
         <parameter name="include_steps">true</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def get_workflows(self, include_steps: bool = True) -> ToolResult:
         try:
             client = await self.db.client
@@ -409,19 +393,7 @@ class WorkflowTool(AgentBuilderBaseTool):
             }
         }
     })
-    @xml_schema(
-        tag_name="update-workflow",
-        mappings=[
-            {"param_name": "workflow_id", "node_type": "attribute", "path": ".", "required": True},
-            {"param_name": "name", "node_type": "element", "path": "name", "required": False},
-            {"param_name": "description", "node_type": "element", "path": "description", "required": False},
-            {"param_name": "trigger_phrase", "node_type": "element", "path": "trigger_phrase", "required": False},
-            {"param_name": "is_default", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "status", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "validate_tools", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "steps", "node_type": "element", "path": "steps", "required": False}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="update_workflow">
         <parameter name="workflow_id">workflow-123</parameter>
@@ -429,8 +401,7 @@ class WorkflowTool(AgentBuilderBaseTool):
         <parameter name="status">active</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def update_workflow(
         self,
         workflow_id: str,
@@ -519,19 +490,13 @@ class WorkflowTool(AgentBuilderBaseTool):
             }
         }
     })
-    @xml_schema(
-        tag_name="delete-workflow",
-        mappings=[
-            {"param_name": "workflow_id", "node_type": "attribute", "path": ".", "required": True}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="delete_workflow">
         <parameter name="workflow_id">workflow-123</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def delete_workflow(self, workflow_id: str) -> ToolResult:
         try:
             client = await self.db.client
@@ -574,21 +539,14 @@ class WorkflowTool(AgentBuilderBaseTool):
             }
         }
     })
-    @xml_schema(
-        tag_name="activate-workflow",
-        mappings=[
-            {"param_name": "workflow_id", "node_type": "attribute", "path": ".", "required": True},
-            {"param_name": "active", "node_type": "attribute", "path": ".", "required": False}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="activate_workflow">
         <parameter name="workflow_id">workflow-123</parameter>
         <parameter name="active">true</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def activate_workflow(self, workflow_id: str, active: bool = True) -> ToolResult:
         try:
             client = await self.db.client

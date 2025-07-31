@@ -7,7 +7,7 @@ import asyncio
 import logging
 from typing import List, Dict, Any
 from dotenv import load_dotenv
-from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
+from agentpress.tool import Tool, ToolResult, openapi_schema, usage_example
 from utils.config import config
 from sandbox.tool_base import SandboxToolsBase
 from agentpress.thread_manager import ThreadManager
@@ -44,19 +44,13 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-nordic-rns-placement-list",
-        mappings=[
-            {"param_name": "free_text", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="get_nordic_rns_placement_list">
         <parameter name="free_text">placement</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def get_nordic_rns_placement_list(self, free_text: str = "placement") -> ToolResult:
         """
         Fetches news from the Nasdaq Nordic API based on a search term.
@@ -163,19 +157,13 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-lseg-rns-placement-list",
-        mappings=[
-            {"param_name": "free_text", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="get_lseg_rns_placement_list">
         <parameter name="free_text">placement</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def get_lseg_rns_placement_list(self, free_text: str = "placement") -> ToolResult:
         """
         Fetches news from the LSEG via Investegate using Firecrawl to scrape filtered content.
@@ -378,19 +366,13 @@ class SandboxOfficialMarketNewsTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-euronext-rns-placement-list",
-        mappings=[
-            {"param_name": "free_text", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="get_euronext_rns_placement_list">
         <parameter name="free_text">placement</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def get_euronext_rns_placement_list(self, free_text: str = "placement") -> ToolResult:
         """
         Fetches news from Euronext using Firecrawl to scrape filtered content.

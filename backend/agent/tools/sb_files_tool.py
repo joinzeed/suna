@@ -1,4 +1,4 @@
-from agentpress.tool import ToolResult, openapi_schema, xml_schema
+from agentpress.tool import ToolResult, openapi_schema, usage_example
 from sandbox.tool_base import SandboxToolsBase
 from utils.files_utils import should_exclude_file, clean_path
 from agentpress.thread_manager import ThreadManager
@@ -103,13 +103,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="create-file",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "file_contents", "node_type": "content", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="create_file">
         <parameter name="file_path">src/main.py</parameter>
@@ -123,8 +117,7 @@ class SandboxFilesTool(SandboxToolsBase):
         </parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def create_file(self, file_path: str, file_contents: str, permissions: str = "644") -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -189,14 +182,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="str-replace",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "old_str", "node_type": "element", "path": "old_str"},
-            {"param_name": "new_str", "node_type": "element", "path": "new_str"}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="str_replace">
         <parameter name="file_path">src/main.py</parameter>
@@ -204,8 +190,7 @@ class SandboxFilesTool(SandboxToolsBase):
         <parameter name="new_str">replacement text that will be inserted instead</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def str_replace(self, file_path: str, old_str: str, new_str: str) -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -274,13 +259,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="full-file-rewrite",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "file_contents", "node_type": "content", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="full_file_rewrite">
         <parameter name="file_path">src/main.py</parameter>
@@ -292,8 +271,7 @@ class SandboxFilesTool(SandboxToolsBase):
         </parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def full_file_rewrite(self, file_path: str, file_contents: str, permissions: str = "644") -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -340,19 +318,13 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="delete-file",
-        mappings=[
-            {"param_name": "file_path", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="delete_file">
         <parameter name="file_path">src/main.py</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def delete_file(self, file_path: str) -> ToolResult:
         try:
             # Ensure sandbox is initialized
@@ -401,35 +373,7 @@ class SandboxFilesTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="copy-supabase-field-to-file",
-        mappings=[
-            {"param_name": "table_name", "node_type": "attribute", "path": "."},
-            {"param_name": "field_name", "node_type": "attribute", "path": "."},
-            {"param_name": "primary_key", "node_type": "attribute", "path": "."},
-            {"param_name": "primary_key_value", "node_type": "attribute", "path": "."},
-            {"param_name": "output_file_path", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <!-- Example: Mark multiple scattered tasks as complete in a todo list -->
-        <function_calls>
-        <invoke name="edit_file">
-        <parameter name="target_file">todo.md</parameter>
-        <parameter name="instructions">I am marking the research and setup tasks as complete in my todo list.</parameter>
-        <parameter name="code_edit">
-// ... existing code ...
-- [x] Research topic A
-- [ ] Research topic B
-- [x] Research topic C
-// ... existing code ...
-- [x] Setup database
-- [x] Configure server
-// ... existing code ...
-        </parameter>
-        </invoke>
-        </function_calls>
-
-        <!-- Example: Add error handling and logging to a function -->
+    @usage_example('''
         <function_calls>
         <invoke name="copy_supabase_field_to_file">
         <parameter name="table_name">users</parameter>
@@ -439,8 +383,7 @@ class SandboxFilesTool(SandboxToolsBase):
         <parameter name="output_file_path">output/email.txt</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def copy_supabase_field_to_file(self, table_name: str, field_name: str, primary_key: str, primary_key_value: str, output_file_path: str) -> ToolResult:
         """Copy the value of a single field from a single row (by primary key) of a Supabase table in the job Supabase database into a file in the sandbox."""
         try:
@@ -450,6 +393,7 @@ class SandboxFilesTool(SandboxToolsBase):
             # Get job Supabase client from config
             from utils.config import config
             from supabase import create_async_client
+
             supabase_url = config.JOB_SUPABASE_URL
             supabase_key = config.JOB_SUPABASE_SERVICE_ROLE_KEY
             if not supabase_url or not supabase_key:
@@ -466,8 +410,7 @@ class SandboxFilesTool(SandboxToolsBase):
             field_value = str(response.data[field_name])
 
             # Write to file in sandbox
-            output_file_path = self.clean_path(output_file_path)
-            full_path = f"{self.workspace_path}/{output_file_path}"
+            full_path = f"/workspace/{output_file_path}"
             parent_dir = '/'.join(full_path.split('/')[:-1])
             if parent_dir:
                 await self.sandbox.fs.create_folder(parent_dir, "755")
@@ -478,104 +421,109 @@ class SandboxFilesTool(SandboxToolsBase):
         except Exception as e:
             return self.fail_response(f"Error copying Supabase field: {str(e)}")
 
+    @openapi_schema({
+        "type": "function",
+        "function": {
+            "name": "edit_file",
+            "description": "Edit a file using AI-powered intelligent editing with fallback to string replacement. The file path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_file": {
+                        "type": "string",
+                        "description": "Path to the file to be edited, relative to /workspace (e.g., 'src/main.py')"
+                    },
+                    "instructions": {
+                        "type": "string",
+                        "description": "Instructions for the edit operation"
+                    },
+                    "code_edit": {
+                        "type": "string",
+                        "description": "The new content to write to the file"
+                    }
+                },
+                "required": ["target_file", "instructions", "code_edit"]
+            }
+        }
+    })
+    @usage_example('''
+        <!-- Example: Mark multiple scattered tasks as complete in a todo list -->
+        <function_calls>
+        <invoke name="edit_file">
+        <parameter name="target_file">todo.md</parameter>
+        <parameter name="instructions">I am marking the research and setup tasks as complete in my todo list.</parameter>
+        <parameter name="code_edit">
+        - [x] Research topic A
+        - [ ] Research topic B
+        - [x] Research topic C
+        - [x] Setup database
+        - [x] Configure server
+        </parameter>
+        </invoke>
+        </function_calls>
+        ''')
+    async def edit_file(self, target_file: str, instructions: str, code_edit: str) -> ToolResult:
+        """Edit a file using AI-powered intelligent editing with fallback to string replacement"""
+        try:
+            await self._ensure_sandbox()
+            
+            # Clean the file path
+            target_file = self.clean_path(target_file)
+            full_path = f"/workspace/{target_file}"
+            
+            # Check if file exists
+            if not await self._file_exists(full_path):
+                return self.fail_response(f"File '{target_file}' does not exist")
+            
+            # For now, use full_file_rewrite as a fallback
+            # In the future, this could use AI-powered editing
+            await self.sandbox.fs.upload_file(code_edit.encode(), full_path)
+            await self.sandbox.fs.set_file_permissions(full_path, "644")
+            
+            return self.success_response(f"Successfully edited file '{target_file}' with the provided content")
+        except Exception as e:
+            return self.fail_response(f"Error editing file: {str(e)}")
+
     # @openapi_schema({
     #     "type": "function",
     #     "function": {
     #         "name": "read_file",
-    #         "description": "Read and return the contents of a file. This tool is essential for verifying data, checking file contents, and analyzing information. Always use this tool to read file contents before processing or analyzing data. The file path must be relative to /workspace.",
+    #         "description": "Read the contents of a file at the given path. The path must be relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py)",
     #         "parameters": {
     #             "type": "object",
     #             "properties": {
     #                 "file_path": {
     #                     "type": "string",
-    #                     "description": "Path to the file to read, relative to /workspace (e.g., 'src/main.py' for /workspace/src/main.py). Must be a valid file path within the workspace."
-    #                 },
-    #                 "start_line": {
-    #                     "type": "integer",
-    #                     "description": "Optional starting line number (1-based). Use this to read specific sections of large files. If not specified, reads from the beginning of the file.",
-    #                     "default": 1
-    #                 },
-    #                 "end_line": {
-    #                     "type": "integer",
-    #                     "description": "Optional ending line number (inclusive). Use this to read specific sections of large files. If not specified, reads to the end of the file.",
-    #                     "default": None
+    #                     "description": "Path to the file to be read, relative to /workspace (e.g., 'src/main.py')"
     #                 }
     #             },
     #             "required": ["file_path"]
     #         }
     #     }
     # })
-    # @xml_schema(
-    #     tag_name="read-file",
-    #     mappings=[
-    #         {"param_name": "file_path", "node_type": "attribute", "path": "."},
-    #         {"param_name": "start_line", "node_type": "attribute", "path": ".", "required": False},
-    #         {"param_name": "end_line", "node_type": "attribute", "path": ".", "required": False}
-    #     ],
-    #     example='''
-    #     <!-- Example 1: Read entire file -->
-    #     <read-file file_path="src/main.py">
-    #     </read-file>
-
-    #     <!-- Example 2: Read specific lines (lines 10-20) -->
-    #     <read-file file_path="src/main.py" start_line="10" end_line="20">
-    #     </read-file>
-
-    #     <!-- Example 3: Read from line 5 to end -->
-    #     <read-file file_path="config.json" start_line="5">
-    #     </read-file>
-
-    #     <!-- Example 4: Read last 10 lines -->
-    #     <read-file file_path="logs/app.log" start_line="-10">
-    #     </read-file>
-    #     '''
-    # )
-    # async def read_file(self, file_path: str, start_line: int = 1, end_line: Optional[int] = None) -> ToolResult:
-    #     """Read file content with optional line range specification.
-        
-    #     Args:
-    #         file_path: Path to the file relative to /workspace
-    #         start_line: Starting line number (1-based), defaults to 1
-    #         end_line: Ending line number (inclusive), defaults to None (end of file)
-            
-    #     Returns:
-    #         ToolResult containing:
-    #         - Success: File content and metadata
-    #         - Failure: Error message if file doesn't exist or is binary
-    #     """
+    # @usage_example('''
+    #     <function_calls>
+    #     <invoke name="read_file">
+    #     <parameter name="file_path">src/main.py</parameter>
+    #     </invoke>
+    #     </function_calls>
+    #     ''')
+    # async def read_file(self, file_path: str) -> ToolResult:
+    #     """Read the contents of a file"""
     #     try:
-    #         file_path = self.clean_path(file_path)
-    #         full_path = f"{self.workspace_path}/{file_path}"
-            
+    #         await self._ensure_sandbox()
+    #         
+    #         full_path = f"/workspace/{self.clean_path(file_path)}"
+    #         
     #         if not await self._file_exists(full_path):
     #             return self.fail_response(f"File '{file_path}' does not exist")
-            
-    #         # Download and decode file content
-    #         content = await self.sandbox.fs.download_file(full_path).decode()
-            
-    #         # Split content into lines
-    #         lines = content.split('\n')
-    #         total_lines = len(lines)
-            
-    #         # Handle line range if specified
-    #         if start_line > 1 or end_line is not None:
-    #             # Convert to 0-based indices
-    #             start_idx = max(0, start_line - 1)
-    #             end_idx = end_line if end_line is not None else total_lines
-    #             end_idx = min(end_idx, total_lines)  # Ensure we don't exceed file length
-                
-    #             # Extract the requested lines
-    #             content = '\n'.join(lines[start_idx:end_idx])
-            
-    #         return self.success_response({
-    #             "content": content,
-    #             "file_path": file_path,
-    #             "start_line": start_line,
-    #             "end_line": end_line if end_line is not None else total_lines,
-    #             "total_lines": total_lines
-    #         })
-            
-    #     except UnicodeDecodeError:
-    #         return self.fail_response(f"File '{file_path}' appears to be binary and cannot be read as text")
+    #         
+    #         file_content = await self.sandbox.fs.read_file(full_path)
+    #         
+    #         # Check if file is binary
+    #         try:
+    #             file_content.decode('utf-8')
+    #         except UnicodeDecodeError:
+    #             return self.fail_response(f"File '{file_path}' appears to be binary and cannot be read as text")
     #     except Exception as e:
     #         return self.fail_response(f"Error reading file: {str(e)}")

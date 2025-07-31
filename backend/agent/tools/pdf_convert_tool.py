@@ -1,6 +1,6 @@
 import traceback
 import json
-from agentpress.tool import ToolResult, openapi_schema, xml_schema
+from agentpress.tool import ToolResult, openapi_schema, usage_example
 from agentpress.thread_manager import ThreadManager
 from sandbox.tool_base import SandboxToolsBase
 from utils.logger import logger
@@ -145,23 +145,14 @@ class SandboxPDFConvertTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="convert-html-to-pdf",
-        mappings=[
-            {"param_name": "document_content", "node_type": "content", "path": "."},
-            {"param_name": "external_css", "node_type": "attribute", "path": "."},
-            {"param_name": "javascript", "node_type": "attribute", "path": "."},
-            {"param_name": "renderer", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="convert_html_to_pdf">
         <parameter name="document_content"><h1>Invoice #12345</h1><p>Total: $100.00</p></parameter>
         <parameter name="external_css">h1 { color: navy; } body { font-family: Arial; }</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def convert_html_to_pdf(
         self, 
         document_content: str,
@@ -229,16 +220,7 @@ class SandboxPDFConvertTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="convert-html-file-to-pdf",
-        mappings=[
-            {"param_name": "html_file_path", "node_type": "content", "path": "."},
-            {"param_name": "pdf_file_path", "node_type": "attribute", "path": "."},
-            {"param_name": "external_css", "node_type": "attribute", "path": "."},
-            {"param_name": "javascript", "node_type": "attribute", "path": "."},
-            {"param_name": "renderer", "node_type": "attribute", "path": "."}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="convert_html_file_to_pdf">
         <parameter name="html_file_path">lawsuit_research_report.html</parameter>
@@ -246,8 +228,7 @@ class SandboxPDFConvertTool(SandboxToolsBase):
         <parameter name="external_css">@page { size: A4; margin: 2cm; }</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def convert_html_file_to_pdf(
         self,
         html_file_path: str,

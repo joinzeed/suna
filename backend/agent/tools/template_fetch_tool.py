@@ -1,4 +1,4 @@
-from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
+from agentpress.tool import Tool, ToolResult, openapi_schema, usage_example
 from utils.logger import logger
 from utils.config import config
 from supabase import create_async_client
@@ -39,21 +39,14 @@ class TemplateFetchTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="fetch-template",
-        mappings=[
-            {"param_name": "template_path", "node_type": "attribute", "path": "."},
-            {"param_name": "bucket_name", "node_type": "attribute", "path": ".", "required": False}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="fetch_template">
         <parameter name="template_path">/templates/newsletters/market-intelligence/template.html</parameter>
         <parameter name="bucket_name">templates</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def fetch_template(self, template_path: str, bucket_name: str = "templates") -> ToolResult:
         """
         Fetch a template from Supabase storage.
@@ -196,14 +189,7 @@ class TemplateFetchTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="list-templates",
-        mappings=[
-            {"param_name": "folder_path", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "bucket_name", "node_type": "attribute", "path": ".", "required": False},
-            {"param_name": "limit", "node_type": "attribute", "path": ".", "required": False}
-        ],
-        example='''
+    @usage_example('''
         <function_calls>
         <invoke name="list_templates">
         <parameter name="folder_path">templates/newsletters</parameter>
@@ -211,8 +197,7 @@ class TemplateFetchTool(Tool):
         <parameter name="limit">50</parameter>
         </invoke>
         </function_calls>
-        '''
-    )
+        ''')
     async def list_templates(self, folder_path: str = "", bucket_name: str = "templates", limit: int = 100) -> ToolResult:
         """
         List available templates in a storage bucket or folder.
