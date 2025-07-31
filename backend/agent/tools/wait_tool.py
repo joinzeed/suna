@@ -1,5 +1,5 @@
 import asyncio
-from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
+from agentpress.tool import Tool, ToolResult, openapi_schema
 
 class WaitTool(Tool):
     """A tool to wait for a specified number of seconds."""
@@ -21,19 +21,6 @@ class WaitTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="wait",
-        mappings=[
-            {"param_name": "seconds", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="wait">
-        <parameter name="seconds">10</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def wait(self, seconds: int) -> ToolResult:
         """Waits for a specified number of seconds."""
         try:

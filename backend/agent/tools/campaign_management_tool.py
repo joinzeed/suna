@@ -1,7 +1,7 @@
 import aioboto3
 import json
 from typing import Dict, Any, Optional, List, Union
-from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
+from agentpress.tool import Tool, ToolResult, openapi_schema
 from utils.config import config
 import uuid
 import datetime
@@ -37,27 +37,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="campaign-build",
-        mappings=[
-            {"param_name": "campaign_id", "node_type": "attribute", "path": "."},
-            {"param_name": "user_id", "node_type": "attribute", "path": "."},
-            {"param_name": "configuration_name", "node_type": "attribute", "path": "."},
-            {"param_name": "organization_id", "node_type": "attribute", "path": "."},
-            {"param_name": "organization_name", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="campaign_build">
-        <parameter name="campaign_id">your-campaign-id</parameter>
-        <parameter name="user_id">your-user-id</parameter>
-        <parameter name="configuration_name">your-config-name</parameter>
-        <parameter name="organization_id">your-org-id</parameter>
-        <parameter name="organization_name">your-org-name</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def campaign_build(self, campaign_id: str, user_id: str, configuration_name: str, organization_id: str, organization_name: str) -> ToolResult:
         payload = {
             "path": "/campaign_manage",
@@ -104,21 +83,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="campaign-remove",
-        mappings=[
-            {"param_name": "campaign_id", "node_type": "attribute", "path": "."},
-            {"param_name": "user_id", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="campaign_remove">
-        <parameter name="campaign_id">your-campaign-id</parameter>
-        <parameter name="user_id">your-user-id</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def campaign_remove(self, campaign_id: str, user_id: str) -> ToolResult:
         payload = {
             "path": "/campaign_manage",
@@ -177,21 +141,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="send-prelimilary-job",
-        mappings=[
-            {"param_name": "job_list", "node_type": "content", "path": "."},
-            {"param_name": "batch_id", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="send_prelimilary_job">
-        <parameter name="job_list">[{"name": "BioXcel Therapeutics Inc", "type": "ticker", "ticker": "BTAI"}, {"type": "topic", "topic": "FDA Approves KEYTRUDA for PD-L1+ Resectable Locally Advanced Head & Neck Squamous Cell Carcinoma"}]</parameter>
-        <parameter name="batch_id">batch-123</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def send_prelimilary_job(self, job_list, batch_id):
         """
         Submits research jobs for a list of jobs using batch operations to SQS and a secondary Supabase DB.
@@ -361,21 +310,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="send-deep-research-job",
-        mappings=[
-            {"param_name": "selections", "node_type": "content", "path": "."},
-            {"param_name": "batch_id", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="send_deep_research_job">
-        <parameter name="selections">[{"content_id": "your-content-id-1", "follow_up_queries": ["query1", "query2"], "sqs_message": {"example": "value"}, "preliminary_research_result": {"example": "value"}}, {"content_id": "your-content-id-2", "follow_up_queries": ["query3"]}]</parameter>
-        <parameter name="batch_id">batch-123</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def send_deep_research_job(self, selections, batch_id):
         """
         Submits deep research jobs for a list of selections using batch operations to SQS.
@@ -479,25 +413,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="send-html-generation-job",
-        mappings=[
-            {"param_name": "batch_id", "node_type": "attribute", "path": "."},
-            {"param_name": "select_all", "node_type": "attribute", "path": "."},
-            {"param_name": "required_categories", "node_type": "content", "path": "."},
-            {"param_name": "scanned_count", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="send_html_generation_job">
-        <parameter name="batch_id">batch-123</parameter>
-        <parameter name="select_all">true</parameter>
-        <parameter name="required_categories">["category1", "category2"]</parameter>
-        <parameter name="scanned_count">42</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def send_html_generation_job(self, batch_id: str, select_all: bool, required_categories: list, scanned_count: int) -> ToolResult:
         """
         Sends a message to trigger HTML generation for a specific batch.
@@ -563,27 +478,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="build-batch",
-        mappings=[
-            {"param_name": "batch_id", "node_type": "attribute", "path": "."},
-            {"param_name": "user_id", "node_type": "attribute", "path": "."},
-            {"param_name": "campaign_id", "node_type": "attribute", "path": "."},
-            {"param_name": "config_id", "node_type": "attribute", "path": "."},
-            {"param_name": "select_all", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="build_batch">
-        <parameter name="batch_id">batch-123</parameter>
-        <parameter name="user_id">user-456</parameter>
-        <parameter name="campaign_id">campaign-789</parameter>
-        <parameter name="config_id">config-abc</parameter>
-        <parameter name="select_all">true</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def build_batch(self, batch_id: str, user_id: str, campaign_id: str, config_id: str, select_all: bool = True) -> ToolResult:
         """
         Build a batch via Lambda.
@@ -633,21 +527,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="remove-batch",
-        mappings=[
-            {"param_name": "batch_id", "node_type": "attribute", "path": "."},
-            {"param_name": "user_id", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="remove_batch">
-        <parameter name="batch_id">batch-123</parameter>
-        <parameter name="user_id">user-456</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def remove_batch(self, batch_id: str, user_id: str) -> ToolResult:
         """
         Remove a batch via Lambda.
@@ -699,19 +578,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-job-status",
-        mappings=[
-            {"param_name": "content_ids", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="get_job_status">
-        <parameter name="content_ids">["your-content-id-1", "your-content-id-2"]</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def get_job_status(self, content_ids: Union[str, List[str]]) -> ToolResult:
         """
         Retrieves the status of one or more jobs from the content_jobs table.
@@ -748,21 +614,6 @@ class CampaignManagementTool(Tool):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-batch-status",
-        mappings=[
-            {"param_name": "batch_id", "node_type": "attribute", "path": "."},
-            {"param_name": "owner_id", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="get_batch_status">
-        <parameter name="batch_id">batch-123</parameter>
-        <parameter name="owner_id">user-456</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def get_batch_status(self, batch_id: str, user_id: str) -> ToolResult:
         """
         Retrieves the status of a batch from the content_batches table for the given batch_id and owner_id.

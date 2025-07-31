@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 from bs4 import BeautifulSoup
 import re
 from dotenv import load_dotenv
-from agentpress.tool import Tool, ToolResult, openapi_schema, xml_schema
+from agentpress.tool import Tool, ToolResult, openapi_schema
 from utils.config import config
 from sandbox.tool_base import SandboxToolsBase
 from agentpress.thread_manager import ThreadManager
@@ -407,31 +407,6 @@ class SandboxFinvizTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="run-screener",
-        mappings=[
-            {"param_name": "params", "node_type": "content", "path": "."},
-            {"param_name": "fetch_all_pages", "node_type": "attribute", "path": "."}
-        ],
-        example='''
-        <function_calls>
-        <invoke name="run_screener">
-        <parameter name="params">{
-            "order": "marketcap", 
-            "desc": true, 
-            "filters": {
-                "cap": "largeover",
-                "fa_pe": "u20",
-                "sec": "technology",
-                "geo": "usa"
-            },
-            "page": 1
-        }</parameter>
-        <parameter name="fetch_all_pages">false</parameter>
-        </invoke>
-        </function_calls>
-        '''
-    )
     async def run_screener(self, params: Dict[str, Any], fetch_all_pages: bool = False) -> ToolResult:
         """
         Execute Finviz screener with the provided parameters.
@@ -499,15 +474,6 @@ class SandboxFinvizTool(SandboxToolsBase):
             }
         }
     })
-    @xml_schema(
-        tag_name="get-available-filters",
-        mappings=[],
-        example='''
-        <function_calls>
-        <invoke name="get_available_filters" />
-        </function_calls>
-        '''
-    )
     async def get_available_filters(self) -> ToolResult:
         """
         Returns all available filter keys and their possible values for the Finviz screener.
