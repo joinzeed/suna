@@ -409,7 +409,7 @@ class CredentialProfileTool(AgentBuilderBaseTool):
                             version_service = await get_version_service()
                             await version_service.create_version(
                                 agent_id=self.agent_id,
-                                user_id=self.account_id,
+                                user_id=account_id,
                                 system_prompt=current_config.get('system_prompt', ''),
                                 configured_mcps=current_config.get('tools', {}).get('mcp', []),
                                 custom_mcps=updated_mcps,

@@ -30,10 +30,15 @@ class ExecutionService:
             logger.info(f"Executing trigger for agent {agent_id}: workflow={trigger_result.should_execute_workflow}, agent={trigger_result.should_execute_agent}")
             
             if trigger_result.should_execute_workflow:
+                # Ensure workflow_input is a dict
+                workflow_input = trigger_result.workflow_input
+                if not isinstance(workflow_input, dict):
+                    workflow_input = {}
+                
                 return await self._workflow_executor.execute_workflow(
                     agent_id=agent_id,
                     workflow_id=trigger_result.workflow_id,
-                    workflow_input=trigger_result.workflow_input or {},
+                    workflow_input=workflow_input,
                     trigger_result=trigger_result,
                     trigger_event=trigger_event
                 )
@@ -284,7 +289,7 @@ class AgentExecutor:
         trigger_variables: Dict[str, Any]
     ) -> str:
         client = await self._db.client
-        model_name = "anthropic/claude-sonnet-4-20250514"
+        model_name = "gemini/gemini-2.5-pro"
         
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,
@@ -393,6 +398,16 @@ class WorkflowExecutor:
             raise ValueError(f"Workflow {workflow_id} is not active")
         
         steps_json = workflow_config.get('steps', [])
+        
+        # Debug logging and type checking
+        logger.info(f"Workflow config keys: {list(workflow_config.keys())}")
+        logger.info(f"Steps data type: {type(steps_json)}, length: {len(steps_json) if isinstance(steps_json, (list, str)) else 'N/A'}")
+        
+        # Ensure steps_json is a list
+        if not isinstance(steps_json, list):
+            logger.warning(f"Steps is not a list, got {type(steps_json)}. Converting to empty list.")
+            steps_json = []
+        
         return workflow_config, steps_json
     
     async def _get_agent_data(self, agent_id: str) -> Tuple[Dict[str, Any], str]:
@@ -456,28 +471,50 @@ class WorkflowExecutor:
         available_tools = []
         agentpress_tools = agent_config.get('agentpress_tools', {})
         
+        configured_mcps = agent_config.get('configured_mcps', [])
+        custom_mcps = agent_config.get('custom_mcps', [])
+        
+        # Ensure agentpress_tools is a dictionary, not a boolean
+        if not isinstance(agentpress_tools, dict):
+            agentpress_tools = {}
+        
         tool_mapping = {
             'sb_shell_tool': ['execute_command'],
-            'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file'],
+            'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file', 'copy_supabase_field_to_file'],
             'sb_browser_tool': ['browser_navigate_to', 'browser_take_screenshot'],
             'sb_vision_tool': ['see_image'],
             'sb_deploy_tool': ['deploy'],
             'sb_expose_tool': ['expose_port'],
             'web_search_tool': ['web_search'],
-            'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call']
+            'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
+            'finviz_tool': ['run_screener', 'get_available_filters'],
+            'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_prelimilary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
+            'official_market_news_tool': ['get_nordic_rns_placement_list', 'get_lseg_rns_placement_list', 'get_euronext_rns_placement_list'],
+            'wait_tool': ['wait']
         }
         
         for tool_key, tool_names in tool_mapping.items():
-            if agentpress_tools.get(tool_key, {}).get('enabled', False):
-                available_tools.extend(tool_names)
+            tool_config = agentpress_tools.get(tool_key, {})
+            # Handle both boolean values (legacy) and dict values (new format)
+            if isinstance(tool_config, bool):
+                if tool_config:  # If True, tool is enabled
+                    available_tools.extend(tool_names)
+            elif isinstance(tool_config, dict):
+                if tool_config.get('enabled', False):
+                    available_tools.extend(tool_names)
+            else:
+                logger.warning(f"Unexpected tool config type for {tool_key}: {type(tool_config)} = {tool_config}")
         
         all_mcps = []
-        if agent_config.get('configured_mcps'):
-            all_mcps.extend(agent_config['configured_mcps'])
-        if agent_config.get('custom_mcps'):
-            all_mcps.extend(agent_config['custom_mcps'])
+        if configured_mcps:
+            all_mcps.extend(configured_mcps)
+        if custom_mcps:
+            all_mcps.extend(custom_mcps)
         
         for mcp in all_mcps:
+            # Ensure mcp is a dictionary, not a boolean or other type
+            if not isinstance(mcp, dict):
+                continue
             enabled_tools_list = mcp.get('enabledTools', [])
             available_tools.extend(enabled_tools_list)
         

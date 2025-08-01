@@ -43,11 +43,30 @@ class FeatureFlagManager:
             flag_key = f"{self.flag_prefix}{key}"
             redis_client = await redis.get_client()
             enabled = await redis_client.hget(flag_key, 'enabled')
-            return enabled == 'true' if enabled else False
+            if enabled is not None:
+                return enabled == 'true'
         except Exception as e:
             logger.error(f"Failed to check feature flag {key}: {e}")
-            # Return False by default if Redis is unavailable
-            return False
+        
+        # Fallback to hardcoded values if Redis is unavailable or flag not set
+        return self._get_default_flag_value(key)
+    
+    def _get_default_flag_value(self, key: str) -> bool:
+        """Get default flag value from hardcoded constants"""
+        # Import here to avoid circular imports
+        import flags.flags as flags_module
+        
+        default_flags = {
+            'custom_agents': getattr(flags_module, 'custom_agents', False),
+            'mcp_module': getattr(flags_module, 'mcp_module', False),
+            'templates_api': getattr(flags_module, 'templates_api', False),
+            'triggers_api': getattr(flags_module, 'triggers_api', False),
+            'agent_triggers': getattr(flags_module, 'triggers_api', False),  # alias
+            'workflows_api': getattr(flags_module, 'workflows_api', False),
+            'knowledge_base': getattr(flags_module, 'knowledge_base', False),
+        }
+        
+        return default_flags.get(key, False)
     
     async def get_flag(self, key: str) -> Optional[Dict[str, str]]:
         """Get feature flag details"""

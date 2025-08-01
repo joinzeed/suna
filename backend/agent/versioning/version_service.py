@@ -226,6 +226,12 @@ class VersionService:
             'created_by': version.created_by,
             'change_description': version.change_description,
             'previous_version_id': version.previous_version_id,
+            # Include old column values for backward compatibility
+            'system_prompt': version.system_prompt,
+            'configured_mcps': version.configured_mcps,
+            'custom_mcps': version.custom_mcps,
+            'agentpress_tools': version.agentpress_tools,
+            # New config structure
             'config': {
                 'system_prompt': version.system_prompt,
                 'tools': {

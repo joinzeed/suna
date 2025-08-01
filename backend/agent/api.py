@@ -1596,6 +1596,7 @@ async def create_agent(
             "account_id": user_id,
             "name": agent_data.name,
             "description": agent_data.description,
+            "system_prompt": agent_data.system_prompt,
             "avatar": agent_data.avatar,
             "avatar_color": agent_data.avatar_color,
             "is_default": agent_data.is_default or False,
