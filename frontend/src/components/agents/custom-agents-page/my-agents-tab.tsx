@@ -1,15 +1,13 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Plus, Filter, Globe, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Globe } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SearchBar } from './search-bar';
 import { EmptyState } from '../empty-state';
 import { AgentsGrid } from '../agents-grid';
 import { LoadingState } from '../loading-state';
 import { Pagination } from '../pagination';
-import { Badge } from '@/components/ui/badge';
 import { AgentCard } from './agent-card';
 
 type AgentFilter = 'all' | 'templates';
@@ -26,7 +24,8 @@ interface MyAgentsTabProps {
   onDeleteAgent: (agentId: string) => void;
   onToggleDefault: (agentId: string, currentDefault: boolean) => void;
   onClearFilters: () => void;
-  deleteAgentMutation: any;
+  deleteAgentMutation?: any; // Made optional
+  isDeletingAgent?: (agentId: string) => boolean;
   setAgentsPage: (page: number) => void;
 
   myTemplates: any[];
@@ -59,6 +58,7 @@ export const MyAgentsTab = ({
   onToggleDefault,
   onClearFilters,
   deleteAgentMutation,
+  isDeletingAgent,
   setAgentsPage,
   myTemplates,
   templatesLoading,
@@ -191,6 +191,7 @@ export const MyAgentsTab = ({
                 onDeleteAgent={onDeleteAgent}
                 onToggleDefault={onToggleDefault}
                 deleteAgentMutation={deleteAgentMutation}
+                isDeletingAgent={isDeletingAgent}
                 onPublish={onPublishAgent}
                 publishingId={publishingAgentId}
               />

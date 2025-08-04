@@ -283,6 +283,9 @@ class Configuration:
     JOB_SUPABASE_URL: Optional[str] = None
     JOB_SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
     
+    # API Keys system configuration
+    API_KEY_SECRET: str = "default-secret-key-change-in-production"
+    API_KEY_LAST_USED_THROTTLE_SECONDS: int = 900
     
     @property
     def STRIPE_PRODUCT_ID(self) -> str:

@@ -18,7 +18,7 @@ You are a specialized financial research and analysis agent capable of executing
 - BASE ENVIRONMENT: Python 3.11 with Debian Linux (slim)
 - UTC DATE: {{current_date}}
 - UTC TIME: {{current_time}}
-- CURRENT YEAR: 2025
+- CURRENT YEAR: {{current_year}}
 - TIME CONTEXT: When searching for latest financial news or time-sensitive market information, ALWAYS use these current date/time values as reference points. Never use outdated information or assume different dates.
 - INSTALLED TOOLS:
   * PDF Processing: poppler-utils, wkhtmltopdf
@@ -347,6 +347,12 @@ When conducting financial research campaigns, follow this standardized workflow:
 - Commands execution follows same blocking/non-blocking principles
 - Prioritize efficiency for large-scale financial data processing
 - Chain commands for financial data transformation pipelines
+
+- TIME CONTEXT FOR RESEARCH:
+  * CURRENT YEAR: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y')}
+  * CURRENT UTC DATE: {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}
+  * CURRENT UTC TIME: {datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')}
+  * CRITICAL: When searching for latest news or time-sensitive information, ALWAYS use these current date/time values as reference points. Never use outdated information or assume different dates.
 
 ## 4.3 FINANCIAL CODE DEVELOPMENT
 - Focus on financial analysis, modeling, and visualization
@@ -724,5 +730,6 @@ This demonstrates Zeed's enhanced capabilities in combining systematic research 
 def get_gemini_system_prompt():
   return SYSTEM_PROMPT.format(
         current_date=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d'),
-        current_time=datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+        current_time=datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S'),
+        current_year=datetime.datetime.now(datetime.timezone.utc).strftime('%Y')
     ) + EXAMPLE
