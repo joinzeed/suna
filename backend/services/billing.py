@@ -318,9 +318,9 @@ async def get_usage_logs(client, user_id: str, page: int = 0, items_per_page: in
     
     while True:
         threads_batch = await client.table('threads') \
-            .select('thread_id') \
+            .select('thread_id, agent_runs(thread_id)') \
             .eq('account_id', user_id) \
-            .gte('created_at', start_of_month.isoformat()) \
+            .gte('agent_runs.created_at', start_of_month.isoformat()) \
             .range(offset, offset + batch_size - 1) \
             .execute()
         
@@ -555,15 +555,7 @@ async def check_billing_status(client, user_id: str) -> Tuple[bool, str, Optiona
         "minutes_limit": "no limit"
     }
     
-    # Original billing logic (commented out)
-    # if config.ENV_MODE == EnvMode.LOCAL:
-    #     logger.info("Running in local development mode - billing checks are disabled")
-    #     return True, "Local development mode - billing disabled", {
-    #         "price_id": "local_dev",
-    #         "plan_name": "Local Development",
-    #         "minutes_limit": "no limit"
-    #     }
-    
+    # Original billing logic (commented out below)
     # Get current subscription
     subscription = await get_user_subscription(user_id)
     # print("Current subscription:", subscription)
@@ -1343,6 +1335,7 @@ async def get_available_models(
                 "subscription_tier": "Local Development",
                 "total_models": len(model_info)
             }
+        
         
         # For non-local mode, get list of allowed models for this user
         allowed_models = await get_allowed_models_for_user(client, current_user_id)
