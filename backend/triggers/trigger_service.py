@@ -21,6 +21,10 @@ class TriggerEvent:
     trigger_type: TriggerType
     raw_data: Dict[str, Any]
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    workflow_id: Optional[str] = None
+    event_type: Optional[str] = None
+    event_data: Optional[Dict[str, Any]] = None
+    config: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -180,8 +184,33 @@ class TriggerService:
             trigger_id=trigger_id,
             agent_id=trigger.agent_id,
             trigger_type=trigger.trigger_type,
-            raw_data=raw_data
+            raw_data=raw_data,
+            workflow_id=raw_data.get('workflow_id'),
+            event_type=raw_data.get('execution_type', 'agent'),
+            config=trigger.config
         )
+        
+        from .provider_service import get_provider_service
+        provider_service = get_provider_service(self._db)
+        result = await provider_service.process_event(trigger, event)
+        
+        try:
+            await self._log_trigger_event(event, result)
+        except Exception as e:
+            logger.warning(f"Failed to log trigger event: {e}")
+        
+        return result
+    
+    async def process_trigger(self, event: TriggerEvent) -> Optional[TriggerResult]:
+        """Process a trigger event (used by scheduler service)"""
+        trigger = await self.get_trigger(event.trigger_id)
+        if not trigger:
+            logger.error(f"Trigger not found: {event.trigger_id}")
+            return None
+        
+        if not trigger.is_active:
+            logger.info(f"Trigger is inactive: {event.trigger_id}")
+            return None
         
         from .provider_service import get_provider_service
         provider_service = get_provider_service(self._db)
@@ -247,23 +276,25 @@ class TriggerService:
     async def _log_trigger_event(self, event: TriggerEvent, result: TriggerResult) -> None:
         client = await self._db.client
         
-        await client.table('trigger_event_logs').insert({
-            'log_id': str(uuid.uuid4()),
-            'trigger_id': event.trigger_id,
-            'agent_id': event.agent_id,
-            'trigger_type': event.trigger_type.value,
-            'event_data': event.raw_data,
-            'success': result.success,
-            'should_execute_agent': result.should_execute_agent,
-            'should_execute_workflow': result.should_execute_workflow,
-            'agent_prompt': result.agent_prompt,
-            'workflow_id': result.workflow_id,
-            'workflow_input': result.workflow_input,
-            'execution_variables': result.execution_variables,
-            'error_message': result.error_message,
-            'event_timestamp': event.timestamp.isoformat(),
-            'logged_at': datetime.now(timezone.utc).isoformat()
-        }).execute()
+        # Ensure all JSON fields are serializable
+        try:
+            metadata = event.raw_data if isinstance(event.raw_data, dict) else {}
+            
+            await client.table('trigger_events').insert({
+                'event_id': str(uuid.uuid4()),
+                'trigger_id': event.trigger_id,
+                'agent_id': event.agent_id,
+                'trigger_type': event.trigger_type.value,
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'success': result.success,
+                'should_execute_agent': result.should_execute_agent,
+                'error_message': result.error_message,
+                'metadata': metadata
+            }).execute()
+        except Exception as e:
+            logger.error(f"Failed to log trigger event: {e}, trigger_id={event.trigger_id}")
+            # Don't fail the whole trigger processing just because logging failed
+            pass
 
 
 def get_trigger_service(db_connection: DBConnection) -> TriggerService:

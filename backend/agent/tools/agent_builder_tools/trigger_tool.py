@@ -51,6 +51,11 @@ class TriggerTool(AgentBuilderBaseTool):
                     "agent_prompt": {
                         "type": "string",
                         "description": "Prompt to send to the agent when triggered (required if execution_type is 'agent')"
+                    },
+                    "use_shared_project": {
+                        "type": "boolean",
+                        "description": "Whether to use a shared project/sandbox across scheduled runs. When true, the agent will reuse the same sandbox, allowing access to previous data/logs. Default is false.",
+                        "default": False
                     }
                 },
                 "required": ["name", "cron_expression", "execution_type"]
@@ -77,7 +82,8 @@ class TriggerTool(AgentBuilderBaseTool):
         description: Optional[str] = None,
         workflow_id: Optional[str] = None,
         workflow_input: Optional[Dict[str, Any]] = None,
-        agent_prompt: Optional[str] = None
+        agent_prompt: Optional[str] = None,
+        use_shared_project: bool = False
     ) -> ToolResult:
         try:
             if execution_type not in ["workflow", "agent"]:
@@ -102,7 +108,8 @@ class TriggerTool(AgentBuilderBaseTool):
             trigger_config = {
                 "cron_expression": cron_expression,
                 "execution_type": execution_type,
-                "provider_id": "schedule"
+                "provider_id": "schedule",
+                "use_shared_project": use_shared_project
             }
             
             if execution_type == "workflow":
@@ -133,6 +140,9 @@ class TriggerTool(AgentBuilderBaseTool):
                         result_message += f"**Input Data**: {json.dumps(workflow_input, indent=2)}\n"
                 else:
                     result_message += f"**Prompt**: {agent_prompt}\n"
+                
+                if use_shared_project:
+                    result_message += f"**Shared Project**: Enabled - The agent will reuse the same sandbox across runs\n"
                 
                 result_message += f"\nThe trigger is now active and will run according to the schedule."
                 
@@ -211,6 +221,7 @@ class TriggerTool(AgentBuilderBaseTool):
                     "cron_expression": trigger.config.get("cron_expression"),
                     "execution_type": trigger.config.get("execution_type", "agent"),
                     "is_active": trigger.is_active,
+                    "use_shared_project": trigger.config.get("use_shared_project", False),
                     "created_at": trigger.created_at.isoformat()
                 }
                 
