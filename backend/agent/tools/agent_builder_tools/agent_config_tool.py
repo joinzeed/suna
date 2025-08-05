@@ -319,6 +319,12 @@ class AgentConfigTool(AgentBuilderBaseTool):
             updated_fields = list(agent_update_fields.keys())
             if version_created:
                 updated_fields.append("version_created")
+                if system_prompt is not None:
+                    updated_fields.append("system_prompt")
+                if agentpress_tools is not None:
+                    updated_fields.append("agentpress_tools")
+                if configured_mcps is not None:
+                    updated_fields.append("configured_mcps")
             
             return self.success_response({
                 "message": "Agent updated successfully",

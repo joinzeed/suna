@@ -68,6 +68,7 @@ dependencies = [
   "PyYAML==6.0.1",
   "beautifulsoup4==4.13.4",
   "aioboto3==14.3.0",
+  "sendgrid==6.11.0",
 ]
 
 [project.urls]

@@ -36,6 +36,7 @@ from agent.tools.finviz_tool import SandboxFinvizTool
 from agent.tools.campaign_management_tool import CampaignManagementTool
 from agent.tools.wait_tool import WaitTool
 from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
+from agent.tools.send_email_tool import SendEmailTool
 
 load_dotenv()
 
@@ -82,6 +83,7 @@ class ToolManager:
             self.thread_manager.add_tool(DataProvidersTool)
         self.thread_manager.add_tool(CampaignManagementTool)
         self.thread_manager.add_tool(WaitTool)
+        self.thread_manager.add_tool(SendEmailTool)
     
     def register_agent_builder_tools(self, agent_id: str):
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
@@ -138,6 +140,8 @@ class ToolManager:
             self.thread_manager.add_tool(CampaignManagementTool)
         if safe_tool_check('wait_tool'):
             self.thread_manager.add_tool(WaitTool)
+        if safe_tool_check('send_email_tool'):
+            self.thread_manager.add_tool(SendEmailTool)
 
 
 class MCPManager:

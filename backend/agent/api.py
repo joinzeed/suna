@@ -2228,6 +2228,21 @@ async def delete_agent(agent_id: str, user_id: str = Depends(get_current_user_id
         if agent['is_default']:
             raise HTTPException(status_code=400, detail="Cannot delete default agent")
         
+        # Delete all triggers associated with this agent first
+        triggers_result = await client.table('agent_triggers').select('trigger_id').eq('agent_id', agent_id).execute()
+        if triggers_result.data:
+            from triggers.trigger_service import get_trigger_service
+            trigger_service = get_trigger_service(db)
+            
+            for trigger_data in triggers_result.data:
+                trigger_id = trigger_data['trigger_id']
+                try:
+                    await trigger_service.delete_trigger(trigger_id)
+                    logger.info(f"Deleted trigger {trigger_id} for agent {agent_id}")
+                except Exception as e:
+                    logger.error(f"Failed to delete trigger {trigger_id} for agent {agent_id}: {e}")
+        
+        # Now delete the agent
         await client.table('agents').delete().eq('agent_id', agent_id).execute()
         
         logger.info(f"Successfully deleted agent: {agent_id}")

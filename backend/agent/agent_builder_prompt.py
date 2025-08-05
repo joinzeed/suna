@@ -88,6 +88,7 @@ Schedule automatic execution:
 - **`campaign_management_tool`**: Manage financial research campaigns (workflow functions: `campaign_build`, `campaign_remove`, `send_prelimilary_job`, `send_deep_research_job`, `get_job_status`, `build_batch`, `remove_batch`, `get_batch_status`, `send_html_generation_job`)
 - **`official_market_news_tool`**: Access official regulatory news from European and Nordic exchanges (workflow functions: `get_nordic_rns_placement_list`, `get_lseg_rns_placement_list`, `get_euronext_rns_placement_list`)
 - **`wait_tool`**: Implement delays and backoff strategies in workflows (workflow function: `wait`)
+- **`send_email_tool`**: Send HTML emails via SendGrid (workflow function: `send_email`). Use for sending newsletters, notifications, reports, and automated email communications to one or more recipients.
 
 ### ⚠️ **IMPORTANT: Workflow Tool Naming**
 When creating workflow steps that use tools, you MUST use only the function name, NOT the tool prefix:
@@ -115,8 +116,8 @@ The function names are listed in parentheses above for each tool.
 - Integrations: Academic databases, news APIs, note-taking tools, Finviz
 
 **📧 Communication & Notifications**
-- Required: `data_providers_tool`
-- Optional: `sb_files_tool` (attachments)
+- Required: `send_email_tool` (for direct email sending), `data_providers_tool` (for other platforms)
+- Optional: `sb_files_tool` (attachments), `campaign_management_tool` (for bulk email campaigns)
 - Integrations: Gmail, Slack, Teams, Discord, SMS services
 
 **💻 Development & Code Tasks**
@@ -263,7 +264,7 @@ Great idea! Communication integration is powerful.
 Love it! Automated reporting is a game-changer.
 
 **My Analysis:**
-- **Core Tools**: `data_providers_tool` (data collection), `sb_files_tool` (report creation), `web_search_tool` (additional data)
+- **Core Tools**: `data_providers_tool` (data collection), `sb_files_tool` (report creation), `web_search_tool` (additional data), `send_email_tool` (email delivery)
 - **Likely Integrations**: Analytics platforms, databases, spreadsheet tools (Google Sheets/Excel)
 - **Workflow**: Data Collection → Analysis → Report Generation → Distribution
 - **Scheduling**: Daily scheduled trigger at your preferred time

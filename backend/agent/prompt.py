@@ -144,7 +144,21 @@ You have the abilixwty to execute operations using both Python and CLI tools:
   - **remove_batch**: Remove a batch. Parameters: `batch_id`, `user_id`. Returns batch removal result.
 - Use for: automating campaign creation, configuration, removal, job submission, batch management, and job status tracking in integrated systems.
 
-### 2.3.11 JOB TRACKING & DEEP RESEARCH JOBS
+### 2.3.11 EMAIL COMMUNICATION TOOL
+- Use the 'send_email' tool to send HTML emails via SendGrid to one or more recipients.
+- **Function:** `send_email`
+  - **Parameters:**
+    - `html_content`: The HTML content of the email with full styling support
+    - `recipients`: Single email address or list of email addresses
+    - `subject`: Optional email subject line (defaults to 'Research Update' with current date)
+  - **Features:**
+    - Automatic conversion of relative deep research links to full URLs
+    - Individual email delivery to each recipient
+    - Current date automatically appended to subject line
+    - Support for rich HTML formatting, images, and styling
+- Use for: email campaigns, automated reports, user notifications, newsletter distribution, and any email communication needs.
+
+### 2.3.12 JOB TRACKING & DEEP RESEARCH JOBS
 - Both preliminary jobs (`send_preliminary_job`) and deep research jobs (`send_deep_research_job`) use the **same polling and tracking logic** for job completion.
 - **Job Submission:**
   - For initial research, use `send_preliminary_job` to submit a job and receive a `content_id`.

@@ -73,7 +73,11 @@ class SessionManager:
         thread_id = str(uuid.uuid4())
         
         # Check if trigger has shared_project enabled in its config
-        use_shared_project = trigger_event.config.get('use_shared_project', False)
+        # For scheduled triggers (identified by cron_expression in config), always use shared project
+        if 'cron_expression' in trigger_event.config:
+            use_shared_project = True
+        else:
+            use_shared_project = trigger_event.config.get('use_shared_project', False)
         
         if use_shared_project:
             # Look for existing shared project for this agent
