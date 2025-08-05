@@ -275,12 +275,12 @@ class CampaignManagementTool(Tool):
                             failed_jobs.append({"job": job, "error": f"SQS send failed: {str(e)}"})
                             if entry['Id'] in successful_jobs:
                                 successful_jobs.remove(entry['Id'])
-            return {
+            return self.success_response({
                 "successful_number": len(successful_jobs),
                 "successful_jobs": successful_jobs,
                 "failed_number": len(failed_jobs),
                 "failed_jobs": failed_jobs
-            }
+            })
 
     @openapi_schema({
         "type": "function",
@@ -391,10 +391,10 @@ class CampaignManagementTool(Tool):
                             failed_jobs.append({"content_id": content_id, "error": f"SQS send failed: {str(e)}"})
                             if entry['Id'] in successful_jobs:
                                 successful_jobs.remove(entry['Id'])
-        return {
+        return self.success_response({
             "successful_jobs": successful_jobs,
             "failed_jobs": failed_jobs
-        }
+        })
 
     @openapi_schema({
         "type": "function",
@@ -608,9 +608,9 @@ class CampaignManagementTool(Tool):
                 "type": "object",
                 "properties": {
                     "batch_id": {"type": "string", "description": "Batch ID to check."},
-                    "owner_id": {"type": "string", "description": "Owner ID (user or account)."}
+                    "user_id": {"type": "string", "description": "User ID."}
                 },
-                "required": ["batch_id", "owner_id"]
+                "required": ["batch_id", "user_id"]
             }
         }
     })

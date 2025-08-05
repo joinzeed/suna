@@ -54,8 +54,8 @@ class TriggerTool(AgentBuilderBaseTool):
                     },
                     "use_shared_project": {
                         "type": "boolean",
-                        "description": "Whether to use a shared project/sandbox across scheduled runs. When true, the agent will reuse the same sandbox, allowing access to previous data/logs. Default is false.",
-                        "default": False
+                        "description": "Whether to use a shared project/sandbox across scheduled runs. When true, the agent will reuse the same sandbox, allowing access to previous data/logs. Default is true for scheduled triggers.",
+                        "default": True
                     }
                 },
                 "required": ["name", "cron_expression", "execution_type"]
@@ -83,7 +83,7 @@ class TriggerTool(AgentBuilderBaseTool):
         workflow_id: Optional[str] = None,
         workflow_input: Optional[Dict[str, Any]] = None,
         agent_prompt: Optional[str] = None,
-        use_shared_project: bool = False
+        use_shared_project: bool = True
     ) -> ToolResult:
         try:
             if execution_type not in ["workflow", "agent"]:
@@ -104,6 +104,13 @@ class TriggerTool(AgentBuilderBaseTool):
                 workflow = workflow_result.data[0]
                 if workflow['status'] != 'active':
                     return self.fail_response(f"Workflow '{workflow['name']}' is not active. Please activate it first.")
+            
+            # Add confirmation message about sandbox mode
+            shared_msg = ""
+            if use_shared_project:
+                shared_msg = "Shared sandbox (persistent across runs, retains data/files)"
+            else:
+                shared_msg = "Isolated sandbox (fresh environment for each run)"
             
             trigger_config = {
                 "cron_expression": cron_expression,
@@ -141,8 +148,7 @@ class TriggerTool(AgentBuilderBaseTool):
                 else:
                     result_message += f"**Prompt**: {agent_prompt}\n"
                 
-                if use_shared_project:
-                    result_message += f"**Shared Project**: Enabled - The agent will reuse the same sandbox across runs\n"
+                result_message += f"**Sandbox Mode**: {shared_msg}\n"
                 
                 result_message += f"\nThe trigger is now active and will run according to the schedule."
                 

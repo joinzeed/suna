@@ -715,7 +715,8 @@ async def execute_agent_workflow(
         trigger_id=f"manual_{workflow_id}_{uuid.uuid4()}",
         agent_id=agent_id,
         trigger_type=TriggerType.WEBHOOK,
-        raw_data=execution_data.input_data or {}
+        raw_data=execution_data.input_data or {},
+        config={'use_shared_project': False}  # Manual executions should not use shared sandbox
     )
     
     # Execute workflow

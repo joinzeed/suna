@@ -38,7 +38,7 @@ class SandboxToolsBase(Tool):
                 sandbox_info = project_data.get('sandbox', {})
                 
                 if not sandbox_info.get('id'):
-                    raise ValueError(f"No sandbox found for project {self.project_id}")
+                    raise ValueError(f"No sandbox found for project {self.project_id}. This tool requires a sandbox to function. Please create a sandbox for this project first.")
                 
                 # Store sandbox info
                 self._sandbox_id = sandbox_info['id']
