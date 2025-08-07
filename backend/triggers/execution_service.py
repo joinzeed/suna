@@ -546,6 +546,7 @@ class WorkflowExecutor:
             'web_search_tool': ['web_search'],
             'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
             'finviz_tool': ['run_screener', 'get_available_filters'],
+            'options_screener_tool': ['screen_stocks_with_options'],
             'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_prelimilary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
             'official_market_news_tool': ['get_nordic_rns_placement_list', 'get_lseg_rns_placement_list', 'get_euronext_rns_placement_list'],
             'wait_tool': ['wait']

@@ -37,6 +37,7 @@ from agent.tools.campaign_management_tool import CampaignManagementTool
 from agent.tools.wait_tool import WaitTool
 from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
 from agent.tools.send_email_tool import SendEmailTool
+from agent.tools.market_chameleon_screener import SandboxOptionsScreenerTool
 
 load_dotenv()
 
@@ -78,6 +79,7 @@ class ToolManager:
         self.thread_manager.add_tool(SandboxImageEditTool, project_id=self.project_id, thread_id=self.thread_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(SandboxFinvizTool, project_id=self.project_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=self.project_id, thread_manager=self.thread_manager)
+        self.thread_manager.add_tool(SandboxOptionsScreenerTool, project_id=self.project_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(TaskListTool, project_id=self.project_id, thread_manager=self.thread_manager, thread_id=self.thread_id)
         if config.RAPID_API_KEY:
             self.thread_manager.add_tool(DataProvidersTool)
@@ -136,6 +138,8 @@ class ToolManager:
             self.thread_manager.add_tool(SandboxFinvizTool, project_id=self.project_id, thread_manager=self.thread_manager)
         if safe_tool_check('official_market_news_tool'):
             self.thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=self.project_id, thread_manager=self.thread_manager)
+        if safe_tool_check('options_screener_tool'):
+            self.thread_manager.add_tool(SandboxOptionsScreenerTool, project_id=self.project_id, thread_manager=self.thread_manager)
         if safe_tool_check('campaign_management_tool'):
             self.thread_manager.add_tool(CampaignManagementTool)
         if safe_tool_check('wait_tool'):

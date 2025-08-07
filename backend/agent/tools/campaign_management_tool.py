@@ -286,20 +286,22 @@ class CampaignManagementTool(Tool):
         "type": "function",
         "function": {
             "name": "send_deep_research_job",
-            "description": "Submit a batch of deep research jobs to SQS. Requires a list of selections and a batch_id.",
+            "description": "Submit a batch of deep research jobs to SQS. Each selection requires content_id, follow_up_queries, sqs_message, and preliminary_research_result. Optional: instruction (research focus) and outputFormatTemplate (custom output format).",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "selections": {
                         "type": "array",
-                        "description": "List of selection dictionaries containing content_id, follow_up_queries, and optional sqs_message and preliminary_research_result.",
+                        "description": "List of selection dictionaries containing required and optional fields for deep research.",
                         "items": {
                             "type": "object",
                             "properties": {
                                 "content_id": {"type": "string", "description": "The content_id of the job to follow up on."},
                                 "follow_up_queries": {"type": "array", "description": "List of follow-up queries to send to the deep research queue.", "items": {"type": "string"}},
-                                "sqs_message": {"type": "object", "description": "Original SQS message for the job (optional)."},
-                                "preliminary_research_result": {"type": "object", "description": "Preliminary research result for the job (optional)."}
+                                "sqs_message": {"type": "object", "description": "Original SQS message for the job."},
+                                "preliminary_research_result": {"type": "object", "description": "Preliminary research result for the job."},
+                                "instruction": {"type": "string", "description": "Optional: Specific focus areas or directions for the deep research."},
+                                "outputFormatTemplate": {"type": "string", "description": "Optional: Template path in Supabase (default: 'default/wealth_management_update_template.html')."}
                             },
                             "required": ["content_id", "follow_up_queries", "sqs_message", "preliminary_research_result"]
                         }
@@ -314,7 +316,13 @@ class CampaignManagementTool(Tool):
         """
         Submits deep research jobs for a list of selections using batch operations to SQS.
         Args:
-            selections (list): List of selection dictionaries containing content_id and follow_up_queries
+            selections (list): List of selection dictionaries containing:
+                - content_id: ID of the preliminary research job
+                - follow_up_queries: List of follow-up questions
+                - sqs_message: Original message data
+                - preliminary_research_result: Result from preliminary research
+                - instruction (optional): Specific focus areas for the research
+                - outputFormatTemplate (optional): Template path in Supabase (default: "default/wealth_management_update_template.html")
             batch_id (str): Batch identifier for grouping messages
         Returns:
             dict: Results containing successful and failed jobs
@@ -349,15 +357,25 @@ class CampaignManagementTool(Tool):
                     try:
                         job_id = selection['content_id']
                         message_id = str(uuid.uuid4())
+                        
+                        # Build message body with required fields
+                        message_body = {
+                            'jobId': job_id,
+                            'batchId': batch_id,
+                            'followUpQueries': selection['follow_up_queries'],
+                            'originalMessage': selection['sqs_message'],
+                            'preliminaryResearchResult': selection['preliminary_research_result']
+                        }
+                        
+                        # Add optional fields if provided
+                        if 'instruction' in selection and selection['instruction'] is not None:
+                            message_body['instruction'] = selection['instruction']
+                        if 'outputFormatTemplate' in selection and selection['outputFormatTemplate'] is not None:
+                            message_body['outputFormatTemplate'] = selection['outputFormatTemplate']
+                        
                         entry = {
                             'Id': job_id,
-                            'MessageBody': json.dumps({
-                                'jobId': job_id,
-                                'batchId': batch_id,
-                                'followUpQueries': selection['follow_up_queries'],
-                                'originalMessage': selection['sqs_message'],
-                                'preliminaryResearchResult': selection['preliminary_research_result']
-                            })
+                            'MessageBody': json.dumps(message_body)
                         }
                         if is_fifo_queue:
                             entry['MessageGroupId'] = batch_id

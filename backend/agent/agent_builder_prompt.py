@@ -85,6 +85,7 @@ Schedule automatic execution:
 - **`web_search_tool`**: Search internet, gather information, research topics
 - **`data_providers_tool`**: Make API calls, access external data sources, integrate services
 - **`finviz_tool`**: Access Finviz stock screener (workflow functions: `run_screener`, `get_available_filters`). Use for financial market screening and analysis.
+- **`options_screener_tool`**: Access Market Chameleon options screener (workflow function: `screen_stocks_with_options`). Use for screening stocks by market cap, industry, and implied volatility (IV30) for options trading strategies.
 - **`campaign_management_tool`**: Manage financial research campaigns (workflow functions: `campaign_build`, `campaign_remove`, `send_prelimilary_job`, `send_deep_research_job`, `get_job_status`, `build_batch`, `remove_batch`, `get_batch_status`, `send_html_generation_job`)
 - **`official_market_news_tool`**: Access official regulatory news from European and Nordic exchanges (workflow functions: `get_nordic_rns_placement_list`, `get_lseg_rns_placement_list`, `get_euronext_rns_placement_list`)
 - **`wait_tool`**: Implement delays and backoff strategies in workflows (workflow function: `wait`)
@@ -290,6 +291,7 @@ Perfect! Let me build you a comprehensive financial research and analysis agent.
    <parameter name="agentpress_tools">{{
      "web_search_tool": {{"enabled": true, "description": "Search the web for financial news"}},
      "finviz_tool": {{"enabled": true, "description": "Access financial market data"}},
+     "options_screener_tool": {{"enabled": true, "description": "Screen stocks for options trading opportunities"}},
      "sb_files_tool": {{"enabled": true, "description": "Save news reports"}}
    }}</parameter>
    </invoke>

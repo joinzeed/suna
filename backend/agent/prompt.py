@@ -132,19 +132,29 @@ You have the abilixwty to execute operations using both Python and CLI tools:
 - **Custom formats**: Market cap uses billions (e.g., "0to0.5" for $0-$500M, NOT "u0.5"), follow exact `custom_format` specifications
 - Use for: financial research, portfolio screening, market monitoring on stocks.
 
-### 2.3.10 CAMPAIGN MANAGEMENT TOOL
+### 2.3.10 MARKET CHAMELEON OPTIONS SCREENER TOOL
+- Use `screen_stocks_with_options` to screen US stocks with active options trading based on key criteria:
+  * **Parameters**: `market_cap`, `industry`, `iv30` (implied volatility), `sort_by`, `limit`, `start` (for pagination)
+  * **Market Cap Options**: "Over 100000000000", "Over 10000000000", "1000000000 To 10000000000", "Under 1000000000", etc.
+  * **IV30 Options**: "Above 50.0", "Above 70.0", "20.0 To 50.0", "Below 20.0", etc.
+  * **Industries**: Over 100 sectors including "Biotechnology", "Software - Application", "Semiconductors", etc.
+- **Use Cases**: Find high IV stocks for options trading, screen by sector for targeted strategies, identify volatility opportunities
+- **Pagination**: Use `start` parameter to fetch additional results (e.g., start=0 for first 100, start=100 for next 100)
+- Example: `<invoke name="screen_stocks_with_options"><parameter name="market_cap">Over 10000000000</parameter><parameter name="iv30">Above 50.0</parameter></invoke>`
+
+### 2.3.11 CAMPAIGN MANAGEMENT TOOL
 - Use the 'campaign_management_tool' to manage financial research campaigns via a secure Lambda endpoint.
 - **Functions:**
   - **campaign_build**: Create or configure a campaign. Parameters: `campaign_id`, `user_id`, `configuration_name`, `organization_id`, `organization_name`. Returns campaign creation result.
   - **campaign_remove**: Remove or deactivate a campaign. Parameters: `campaign_id`, `user_id`. Returns removal result.
   - **send_prelimilary_job**: Submit a batch of research jobs (type 'ticker' or 'topic') to SQS and Supabase. Parameters: `job_list` (list of jobs, each with required fields depending on type), `batch_id`. Returns lists of successful and failed jobs.
-  - **send_deep_research_job**: Submit a batch of deep research jobs for follow-up queries on existing jobs. Parameters: `selections` (list of dicts with `content_id`, `follow_up_queries`, and optional `sqs_message`, `preliminary_research_result`), `batch_id`. Returns lists of successful and failed jobs.
+  - **send_deep_research_job**: Submit a batch of deep research jobs for follow-up queries on existing jobs. Parameters: `selections` (list of dicts with `content_id`, `follow_up_queries`, `sqs_message`, `preliminary_research_result`, and optional `instruction` for research focus, `outputFormatTemplate` for custom output format), `batch_id`. Returns lists of successful and failed jobs.
   - **get_job_status**: Get the status of one or more jobs from the content_jobs table. Parameter: `content_ids` (list of job IDs). Returns job status data.
   - **build_batch**: Build a batch for a campaign. Parameters: `batch_id`, `user_id`, `campaign_id`, `config_id`, `select_all` (bool, default true). Returns batch creation result.
   - **remove_batch**: Remove a batch. Parameters: `batch_id`, `user_id`. Returns batch removal result.
 - Use for: automating campaign creation, configuration, removal, job submission, batch management, and job status tracking in integrated systems.
 
-### 2.3.11 EMAIL COMMUNICATION TOOL
+### 2.3.12 EMAIL COMMUNICATION TOOL
 - Use the 'send_email' tool to send HTML emails via SendGrid to one or more recipients.
 - **Function:** `send_email`
   - **Parameters:**
@@ -158,7 +168,7 @@ You have the abilixwty to execute operations using both Python and CLI tools:
     - Support for rich HTML formatting, images, and styling
 - Use for: email campaigns, automated reports, user notifications, newsletter distribution, and any email communication needs.
 
-### 2.3.12 JOB TRACKING & DEEP RESEARCH JOBS
+### 2.3.13 JOB TRACKING & DEEP RESEARCH JOBS
 - Both preliminary jobs (`send_preliminary_job`) and deep research jobs (`send_deep_research_job`) use the **same polling and tracking logic** for job completion.
 - **Job Submission:**
   - For initial research, use `send_preliminary_job` to submit a job and receive a `content_id`.
