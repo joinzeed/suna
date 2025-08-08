@@ -37,6 +37,8 @@ Suna's powerful toolkit includes seamless browser automation to navigate the web
   - [Supabase Database](#supabase-database)
 - [Use Cases](#use-cases)
 - [Self-Hosting](#self-hosting)
+- [Development](#development)
+  - [Git Workflow](#git-workflow)
 - [Acknowledgements](#acknowledgements)
 - [License](#license)
 
@@ -157,6 +159,59 @@ We welcome contributions from the community! Please see our [Contributing Guide]
 - [QStash](https://upstash.com/qstash) - Background job processing and workflows
 - [RapidAPI](https://rapidapi.com/) - API services
 - Custom MCP servers - Extend functionality with custom tools
+
+## Development
+
+### Git Workflow
+
+This fork uses a clean history approach with separate branches for tracking upstream changes.
+
+#### Branch Structure
+- `fork/zeed` - Clean development branch (no secrets in history)
+- `fork/main` - Mirrors upstream `origin/main` (for tracking changes)
+- Local `zeed` - Your working branch (tracks `fork/zeed`)
+
+#### Update Workflow
+
+1. **Update fork/main with latest upstream changes:**
+```bash
+git fetch origin
+git push fork origin/main:main
+```
+
+2. **Check what's new from upstream:**
+```bash
+git fetch fork
+git log --oneline fork/main..zeed   # Your unique commits
+git log --oneline zeed..fork/main   # New upstream commits
+```
+
+3. **Cherry-pick specific commits you want:**
+```bash
+git cherry-pick <commit-hash>
+# Or cherry-pick a range:
+git cherry-pick <start>..<end>
+```
+
+4. **Push your updates:**
+```bash
+git push   # Automatically pushes to fork/zeed
+```
+
+#### Useful Commands
+```bash
+# See file differences between branches
+git diff fork/main..zeed
+
+# See specific commit details
+git show <commit-hash>
+
+# If cherry-pick has conflicts
+git status                  # See conflicts
+# Fix conflicts manually
+git add .
+git cherry-pick --continue
+```
 
 ## License
 
