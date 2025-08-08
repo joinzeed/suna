@@ -26,7 +26,7 @@ from flags.flags import is_enabled
 
 from .config_helper import extract_agent_config, build_unified_config, extract_tools_for_agent_run, get_mcp_configs
 from .versioning.version_service import get_version_service
-from .versioning.api import router as version_router, initialize as initialize_versioning
+from .versioning.versioning_api import router as version_router, initialize as initialize_versioning
 
 # Helper for version service
 async def _get_version_service():
@@ -954,6 +954,7 @@ async def initiate_agent_with_files(
     # Extract full user context including organization information
     user_context = await get_current_user_context_from_jwt(request)
     user_id = user_context.user_id
+    
     global instance_id # Ensure instance_id is accessible
     if not instance_id:
         raise HTTPException(status_code=500, detail="Agent API not initialized with instance ID")
@@ -976,10 +977,7 @@ async def initiate_agent_with_files(
 
     logger.info(f"[\033[91mDEBUG\033[0m] Initiating new agent with prompt and {len(files)} files (Instance: {instance_id}), model: {model_name}, enable_thinking: {enable_thinking}")
     client = await db.client
-    
-    # For Clerk integration, the user_id (format: user_xxxxx) is used directly as account_id
-    # This maintains compatibility with the existing system where Clerk user IDs are used
-    account_id = user_id
+    account_id = user_id # In Basejump, personal account_id is the same as user_id
     
     # Load agent configuration with version support (same as start_agent endpoint)
     agent_config = None
@@ -1024,14 +1022,8 @@ async def initiate_agent_with_files(
             logger.info(f"Using custom agent: {agent_config['name']} ({agent_id}) - no version data")
     else:
         logger.info(f"[AGENT INITIATE] No agent_id provided, querying for default agent")
-        logger.info(f"[AGENT INITIATE] Using account_id: {account_id} (type: {type(account_id)})")
         # Try to get default agent for the account
-        try:
-            default_agent_result = await client.table('agents').select('*').eq('account_id', account_id).eq('is_default', True).execute()
-        except Exception as e:
-            logger.error(f"[AGENT INITIATE] Error querying default agent: {e}")
-            logger.error(f"[AGENT INITIATE] account_id value: '{account_id}'")
-            raise
+        default_agent_result = await client.table('agents').select('*').eq('account_id', account_id).eq('is_default', True).execute()
         logger.info(f"[AGENT INITIATE] Default agent query result: found {len(default_agent_result.data) if default_agent_result.data else 0} default agents")
         
         if default_agent_result.data:
@@ -2961,10 +2953,7 @@ async def create_thread(
         name = "New Project"
     logger.info(f"Creating new thread with name: {name}")
     client = await db.client
-    
-    # For Clerk integration, the user_id (format: user_xxxxx) is used directly as account_id
-    # This maintains compatibility with the existing system where Clerk user IDs are used
-    account_id = user_id
+    account_id = user_id  # In Basejump, personal account_id is the same as user_id
     
     try:
         # 1. Create Project

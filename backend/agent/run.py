@@ -37,7 +37,7 @@ from agent.tools.campaign_management_tool import CampaignManagementTool
 from agent.tools.wait_tool import WaitTool
 from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
 from agent.tools.pdf_convert_tool import SandboxPDFConvertTool
-from agent.tools.template_fetch_tool import TemplateFetchTool
+from agent.tools.supabase_tools import SupabaseTools
 
 load_dotenv()
 
@@ -86,7 +86,7 @@ class ToolManager:
             self.thread_manager.add_tool(DataProvidersTool)
         self.thread_manager.add_tool(CampaignManagementTool)
         self.thread_manager.add_tool(WaitTool)
-        self.thread_manager.add_tool(TemplateFetchTool)
+        self.thread_manager.add_tool(SupabaseTools)
     
     def register_agent_builder_tools(self, agent_id: str):
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
@@ -144,7 +144,7 @@ class ToolManager:
         if safe_tool_check('pdf_convert_tool'):
             self.thread_manager.add_tool(SandboxPDFConvertTool, project_id=self.project_id, thread_id=self.thread_id, thread_manager=self.thread_manager)
         if safe_tool_check('template_fetch_tool'):
-            self.thread_manager.add_tool(TemplateFetchTool)
+            self.thread_manager.add_tool(SupabaseTools)
 
 
 class MCPManager:
