@@ -108,7 +108,7 @@ class WorkflowParser:
         }
         
         # Add description if meaningful
-        description = (first_step.get('description') or '').strip()
+        description = first_step.get('description', '').strip()
         if description and description not in ['Add conditional logic', 'If/Then']:
             parsed_step["description"] = description
         
@@ -141,7 +141,7 @@ class WorkflowParser:
             "step_number": self.step_counter
         }
         
-        description = (step.get('description') or '').strip()
+        description = step.get('description', '').strip()
         if description and description not in ['Click to add steps or use the Add Node button', 'Add conditional logic', 'Add a custom instruction step']:
             parsed_step["description"] = description
         
@@ -178,7 +178,7 @@ class WorkflowParser:
     def _parse_condition_step(self, step: Dict[str, Any]) -> Dict[str, Any]:
         conditions = step.get('conditions', {})
         condition_type = conditions.get('type', 'if')
-        expression = (conditions.get('expression') or '').strip()
+        expression = conditions.get('expression', '').strip()
         
         parsed_condition = {}
         

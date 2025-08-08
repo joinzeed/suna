@@ -147,7 +147,7 @@ export default function PricingPage() {
   const { allModels } = useModelSelection();
 
   const [selectedModelId, setSelectedModelId] = useState<string>(
-    'gemini/gemini-2.5-pro',
+    'anthropic/claude-sonnet-4-20250514',
   );
   const [showAllTasks, setShowAllTasks] = useState<boolean>(false);
 

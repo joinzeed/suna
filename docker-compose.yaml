@@ -13,26 +13,12 @@ services:
       timeout: 5s
       retries: 3
 
-  rabbitmq:
-    image: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
   backend:
+    # image: ghcr.io/suna-ai/suna-backend:latest
+    platform: linux/amd64
     build:
       context: ./backend
       dockerfile: Dockerfile
-    platform: linux/amd64
     ports:
       - "8000:8000"
     volumes:
@@ -46,23 +32,20 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - ENV_MODE=development
-    # Direct uvicorn command - no gunicorn
     command: ["bash", "-c", "uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload --log-level info"]
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+      worker:
+        condition: service_started
 
   worker:
+    # image: ghcr.io/suna-ai/suna-backend:latest
+    platform: linux/amd64
     build:
       context: ./backend
       dockerfile: Dockerfile
-    platform: linux/amd64
-    command: uv run dramatiq --skip-logging --processes 1 --threads 4 run_agent_background
+    command: uv run dramatiq --skip-logging --processes 4 --threads 4 run_agent_background
     volumes:
       - ./backend:/app:cached
       - backend_venv:/app/.venv
@@ -74,15 +57,22 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - REDIS_SSL=False
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
     depends_on:
       redis:
         condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
+
+  # frontend:
+  #   init: true
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend/.env.local:/app/.env.local:ro
+  #   depends_on:
+  #     - backend
 
 volumes:
   redis_data:
-  rabbitmq_data:
   backend_venv:

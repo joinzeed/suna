@@ -4,7 +4,6 @@ from utils.logger import logger
 
 def extract_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     agent_id = agent_data.get('agent_id', 'Unknown')
-    logger.info(f"[CONFIG] Extracting config for agent {agent_id}, has_version_data: {version_data is not None}")
 
     metadata = agent_data.get('metadata', {})
     is_suna_default = metadata.get('is_suna_default', False)
@@ -27,13 +26,10 @@ def extract_agent_config(agent_data: Dict[str, Any], version_data: Optional[Dict
             custom_mcps = version_data.get('custom_mcps', [])
             agentpress_tools = version_data.get('agentpress_tools', {})
         
-        logger.info(f"[CONFIG] Version data - agentpress_tools: {agentpress_tools}")
-        
         if is_suna_default:
             from agent.suna.config import SunaConfig
             system_prompt = SunaConfig.get_system_prompt()
             agentpress_tools = SunaConfig.DEFAULT_TOOLS
-            logger.info(f"[CONFIG] Using Suna default tools: {list(agentpress_tools.keys())}")
         
         config = {
             'agent_id': agent_data['agent_id'],

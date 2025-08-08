@@ -33,13 +33,9 @@ class AgentConfigTool(AgentBuilderBaseTool):
                     },
                     "agentpress_tools": {
                         "type": "object",
-                        "description": "Configuration for AgentPress tools. Each key is a tool name, and the value is an object with 'enabled' (boolean) and 'description' (string) properties.",
+                        "description": "Configuration for AgentPress tools. Each key is a tool name, and the value is a boolean indicating if the tool is enabled.",
                         "additionalProperties": {
-                            "type": "object",
-                            "properties": {
-                                "enabled": {"type": "boolean"},
-                                "description": {"type": "string"}
-                            }
+                            "type": "boolean"
                         }
                     },
                     "configured_mcps": {
@@ -78,7 +74,7 @@ class AgentConfigTool(AgentBuilderBaseTool):
         <parameter name="name">Research Assistant</parameter>
         <parameter name="description">An AI assistant specialized in conducting research and providing comprehensive analysis</parameter>
         <parameter name="system_prompt">You are a research assistant with expertise in gathering, analyzing, and synthesizing information. Your approach is thorough and methodical...</parameter>
-        <parameter name="agentpress_tools">{"web_search": {"enabled": true, "description": "Search the web for information"}, "sb_files": {"enabled": true, "description": "Read and write files"}}</parameter>
+                        <parameter name="agentpress_tools">{"web_search_tool": true, "sb_files_tool": true, "sb_shell_tool": false}</parameter>
         <parameter name="avatar">🔬</parameter>
         <parameter name="avatar_color">#4F46E5</parameter>
         </invoke>
@@ -95,33 +91,17 @@ class AgentConfigTool(AgentBuilderBaseTool):
         avatar_color: Optional[str] = None
     ) -> ToolResult:
         try:
-            logger.info(f"[UPDATE_AGENT] Starting update for agent_id: {self.agent_id}")
-            logger.info(f"[UPDATE_AGENT] Parameters - name: {name}, description: {description}, system_prompt: {system_prompt is not None}, agentpress_tools: {agentpress_tools}, avatar: {avatar}, avatar_color: {avatar_color}")
-            
+            account_id = await self._get_current_account_id()
             client = await self.db.client
             
-            # Get the account ID first to ensure we're working with the right agent
-            account_id = await self._get_current_account_id()
-            logger.info(f"[UPDATE_AGENT] Current account_id: {account_id}")
-            
-            agent_result = await client.table('agents').select('*').eq('agent_id', self.agent_id).eq('account_id', account_id).execute()
-            logger.info(f"[UPDATE_AGENT] Agent query result: {len(agent_result.data) if agent_result.data else 0} agents found")
-            
+            agent_result = await client.table('agents').select('*').eq('agent_id', self.agent_id).execute()
             if not agent_result.data:
-                # Check if agent exists but belongs to different user
-                any_agent = await client.table('agents').select('agent_id, account_id').eq('agent_id', self.agent_id).execute()
-                if any_agent.data:
-                    logger.error(f"[UPDATE_AGENT] Agent {self.agent_id} exists but belongs to account {any_agent.data[0]['account_id']}, not {account_id}")
-                else:
-                    logger.error(f"[UPDATE_AGENT] Agent {self.agent_id} does not exist at all")
                 return self.fail_response("Agent not found")
             
             current_agent = agent_result.data[0]
-            logger.info(f"[UPDATE_AGENT] Found agent: {current_agent.get('name', 'Unknown')}, version_id: {current_agent.get('current_version_id', 'None')}")
 
             metadata = current_agent.get('metadata', {})
             is_suna_default = metadata.get('is_suna_default', False)
-            logger.info(f"[UPDATE_AGENT] Agent metadata: {metadata}, is_suna_default: {is_suna_default}")
             
             if is_suna_default:
                 restricted_fields = []
@@ -154,28 +134,19 @@ class AgentConfigTool(AgentBuilderBaseTool):
             config_changed = (system_prompt is not None or agentpress_tools is not None or configured_mcps is not None)
             
             if not agent_update_fields and not config_changed:
-                logger.warning(f"[UPDATE_AGENT] No fields provided to update for agent_id: {self.agent_id}")
                 return self.fail_response("No fields provided to update")
             
             if agent_update_fields:
-                logger.info(f"[UPDATE_AGENT] Updating agent fields: {agent_update_fields}")
-                result = await client.table('agents').update(agent_update_fields).eq('agent_id', self.agent_id).eq('account_id', account_id).execute()
+                result = await client.table('agents').update(agent_update_fields).eq('agent_id', self.agent_id).execute()
                 if not result.data:
-                    logger.error(f"[UPDATE_AGENT] Failed to update agent fields for agent_id: {self.agent_id}")
                     return self.fail_response("Failed to update agent")
-                logger.info(f"[UPDATE_AGENT] Successfully updated agent fields")
             
             version_created = False
             if config_changed:
-                logger.info(f"[UPDATE_AGENT] Configuration changed, need to create/update version")
                 try:
                     from agent.versioning.version_service import get_version_service
                     current_version = None
-                    account_id = await self._get_current_account_id()
-                    logger.info(f"[UPDATE_AGENT] Account ID: {account_id}")
-                    
                     if current_agent.get('current_version_id'):
-                        logger.info(f"[UPDATE_AGENT] Attempting to get current version: {current_agent.get('current_version_id')}")
                         try:
                             version_service = await get_version_service()
                             current_version_obj = await version_service.get_version(
@@ -185,57 +156,10 @@ class AgentConfigTool(AgentBuilderBaseTool):
                             )
                             current_version = current_version_obj.to_dict()
                         except Exception as e:
-                            logger.warning(f"[UPDATE_AGENT] Failed to get current version: {e}")
+                            logger.warning(f"Failed to get current version: {e}")
                     
                     if not current_version:
-                        # Create initial version if none exists
-                        logger.info(f"No current version found for agent {self.agent_id}, creating initial version")
-                        from agent.suna.config import SunaConfig
-                        
-                        # Use provided values or defaults
-                        initial_system_prompt = system_prompt if system_prompt is not None else "You are a helpful AI assistant."
-                        initial_agentpress_tools = agentpress_tools if agentpress_tools is not None else SunaConfig.DEFAULT_TOOLS
-                        initial_configured_mcps = configured_mcps if configured_mcps is not None else []
-                        
-                        # Format tools if needed
-                        if initial_agentpress_tools:
-                            formatted_tools = {}
-                            for tool_name, tool_config in initial_agentpress_tools.items():
-                                if isinstance(tool_config, dict):
-                                    formatted_tools[tool_name] = tool_config.get("enabled", False)
-                                else:
-                                    formatted_tools[tool_name] = bool(tool_config)
-                            initial_agentpress_tools = formatted_tools
-                        
-                        # Create the initial version
-                        logger.info(f"[UPDATE_AGENT] Creating initial version with tools: {initial_agentpress_tools}")
-                        new_version = await version_manager.create_version(
-                            agent_id=self.agent_id,
-                            user_id=account_id,
-                            system_prompt=initial_system_prompt,
-                            configured_mcps=initial_configured_mcps,
-                            custom_mcps=[],
-                            agentpress_tools=initial_agentpress_tools,
-                            version_name="v1",
-                            change_description="Initial version created via agent builder"
-                        )
-                        
-                        version_created = True
-                        logger.info(f"[UPDATE_AGENT] Created initial version {new_version['version_id']} for agent {self.agent_id}")
-                        
-                        # The update is now complete since we created the initial version with the requested settings
-                        agent_result = await client.table('agents').select('*').eq('agent_id', self.agent_id).eq('account_id', account_id).execute()
-                        updated_agent = agent_result.data[0] if agent_result.data else current_agent
-                        
-                        updated_fields = list(agent_update_fields.keys())
-                        updated_fields.append("version_created")
-                        
-                        return self.success_response({
-                            "message": "Agent updated successfully with initial version",
-                            "updated_fields": updated_fields,
-                            "agent": updated_agent,
-                            "version_created": version_created
-                        })
+                        return self.fail_response("No current version found to update from")
                     
                     current_system_prompt = system_prompt if system_prompt is not None else current_version.get('system_prompt', '')
                     
@@ -243,7 +167,10 @@ class AgentConfigTool(AgentBuilderBaseTool):
                         formatted_tools = {}
                         for tool_name, tool_config in agentpress_tools.items():
                             if isinstance(tool_config, dict):
-                                formatted_tools[tool_name] = tool_config.get("enabled", False)
+                                if tool_config == {}:
+                                    formatted_tools[tool_name] = True
+                                else:
+                                    formatted_tools[tool_name] = tool_config.get("enabled", False)
                             else:
                                 formatted_tools[tool_name] = bool(tool_config)
                         current_agentpress_tools = formatted_tools
@@ -319,12 +246,6 @@ class AgentConfigTool(AgentBuilderBaseTool):
             updated_fields = list(agent_update_fields.keys())
             if version_created:
                 updated_fields.append("version_created")
-                if system_prompt is not None:
-                    updated_fields.append("system_prompt")
-                if agentpress_tools is not None:
-                    updated_fields.append("agentpress_tools")
-                if configured_mcps is not None:
-                    updated_fields.append("configured_mcps")
             
             return self.success_response({
                 "message": "Agent updated successfully",
@@ -393,8 +314,16 @@ class AgentConfigTool(AgentBuilderBaseTool):
                 "updated_at": agent_data.get("updated_at"),
                 "current_version": agent_config.get("version_name", "v1") if version_data else "No version data"
             }
-            
-            tools_count = len([t for t, cfg in config_summary["agentpress_tools"].items() if cfg.get("enabled")])
+
+            enabled_tools = []
+            for tool_name, tool_config in config_summary["agentpress_tools"].items():
+                if isinstance(tool_config, bool):
+                    if tool_config:
+                        enabled_tools.append(tool_name)
+                elif isinstance(tool_config, dict):
+                    if tool_config.get("enabled", False):
+                        enabled_tools.append(tool_name)
+            tools_count = len(enabled_tools)
             mcps_count = len(config_summary["configured_mcps"])
             custom_mcps_count = len(config_summary["custom_mcps"])
             

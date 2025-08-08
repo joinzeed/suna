@@ -70,7 +70,7 @@ export const MODELS = {
     recommended: false,
     lowQuality: false
   },
-  'gemini/gemini-2.5-pro': { 
+  'google/gemini-2.5-pro': { 
     tier: 'premium', 
     priority: 96,
     recommended: false,
@@ -78,7 +78,7 @@ export const MODELS = {
   },
   'gpt-4.1': { 
     tier: 'premium', 
-    priority: 96,
+    priority: 92,
     recommended: false,
     lowQuality: false
   },
@@ -89,6 +89,18 @@ export const MODELS = {
     lowQuality: false
   },
   'gpt-4o': { 
+    tier: 'premium', 
+    priority: 88,
+    recommended: false,
+    lowQuality: false
+  },
+  'gpt-5': { 
+    tier: 'premium', 
+    priority: 99,
+    recommended: false,
+    lowQuality: false
+  },
+  'gpt-5-mini': { 
     tier: 'premium', 
     priority: 88,
     recommended: false,

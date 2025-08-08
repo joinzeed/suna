@@ -16,7 +16,7 @@ class Agent:
         self,
         client: AgentsClient,
         agent_id: str,
-        model: str = "gemini/gemini-2.5-pro",
+        model: str = "anthropic/claude-sonnet-4-20250514",
     ):
         self._client = client
         self._agent_id = agent_id

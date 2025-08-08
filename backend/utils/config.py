@@ -206,6 +206,7 @@ class Configuration:
     XAI_API_KEY: Optional[str] = None
     MORPH_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
+    GEMINI_API_KEY: Optional[str] = None
     OPENROUTER_API_BASE: Optional[str] = "https://openrouter.ai/api/v1"
     OR_SITE_URL: Optional[str] = "https://kortix.ai"
     OR_APP_NAME: Optional[str] = "Kortix AI"    
@@ -219,7 +220,7 @@ class Configuration:
     DEEP_RESEARCH_QUEUE_URL: Optional[str] = None
     
     # Model configuration
-    MODEL_TO_USE: Optional[str] = "gemini/gemini-2.5-pro"
+    MODEL_TO_USE: Optional[str] = "anthropic/claude-sonnet-4-20250514"
     
     # Supabase configuration
     SUPABASE_URL: str
@@ -266,27 +267,45 @@ class Configuration:
 
     # Admin API key for server-side operations
     KORTIX_ADMIN_API_KEY: Optional[str] = None
-    
+
     # Finviz configuration
     FINVIZ_ELITE_EMAIL: Optional[str] = None
     FINVIZ_ELITE_PASSWORD: Optional[str] = None
     
-    # AWS configuration
-    AWS_ACCESS_KEY_ID: Optional[str] = None
-    AWS_SECRET_ACCESS_KEY: Optional[str] = None
-    AWS_REGION_NAME: Optional[str] = None
-    CAMPAIGN_MANAGEMENT_LAMBDA_FUNCTION_NAME: Optional[str] = None
-    SQS_QUEUE_URL: Optional[str] = None
-    
-    
     # Job Supabase configuration
     JOB_SUPABASE_URL: Optional[str] = None
     JOB_SUPABASE_SERVICE_ROLE_KEY: Optional[str] = None
-    
+
     # API Keys system configuration
     API_KEY_SECRET: str = "default-secret-key-change-in-production"
     API_KEY_LAST_USED_THROTTLE_SECONDS: int = 900
     
+    # Agent execution limits (can be overridden via environment variable)
+    _MAX_PARALLEL_AGENT_RUNS_ENV: Optional[str] = None
+
+    @property
+    def MAX_PARALLEL_AGENT_RUNS(self) -> int:
+        """
+        Get the maximum parallel agent runs limit.
+        
+        Can be overridden via MAX_PARALLEL_AGENT_RUNS environment variable.
+        Defaults:
+        - Production: 3
+        - Local/Staging: 999999 (effectively infinite)
+        """
+        # Check for environment variable override first
+        if self._MAX_PARALLEL_AGENT_RUNS_ENV is not None:
+            try:
+                return int(self._MAX_PARALLEL_AGENT_RUNS_ENV)
+            except ValueError:
+                logger.warning(f"Invalid MAX_PARALLEL_AGENT_RUNS value: {self._MAX_PARALLEL_AGENT_RUNS_ENV}, using default")
+        
+        # Environment-based defaults
+        if self.ENV_MODE == EnvMode.PRODUCTION:
+            return 3
+        else:
+            # Local and staging: effectively infinite
+            return 999999
     @property
     def STRIPE_PRODUCT_ID(self) -> str:
         if self.ENV_MODE == EnvMode.STAGING:
@@ -336,6 +355,11 @@ class Configuration:
                 else:
                     # String or other type
                     setattr(self, key, env_val)
+        
+        # Custom handling for environment-dependent properties
+        max_parallel_runs_env = os.getenv("MAX_PARALLEL_AGENT_RUNS")
+        if max_parallel_runs_env is not None:
+            self._MAX_PARALLEL_AGENT_RUNS_ENV = max_parallel_runs_env
     
     def _validate(self):
         """Validate configuration based on type hints."""

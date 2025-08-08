@@ -61,7 +61,7 @@ MODELS = {
     
     # Paid tier only models
     "gemini/gemini-2.5-pro": {
-        "aliases": ["gemini/gemini-2.5-pro"],
+        "aliases": ["google/gemini-2.5-pro"],
         "pricing": {
             "input_cost_per_million_tokens": 1.25,
             "output_cost_per_million_tokens": 10.00
@@ -81,6 +81,22 @@ MODELS = {
         "pricing": {
             "input_cost_per_million_tokens": 15.00,
             "output_cost_per_million_tokens": 60.00
+        },
+        "tier_availability": ["paid"]
+    },
+    "openai/gpt-5": {
+        "aliases": ["gpt-5"],
+        "pricing": {
+            "input_cost_per_million_tokens": 1.25,
+            "output_cost_per_million_tokens": 10.00
+        },
+        "tier_availability": ["paid"]
+    },
+    "openai/gpt-5-mini": {
+        "aliases": ["gpt-5-mini"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.25,
+            "output_cost_per_million_tokens": 2.00
         },
         "tier_availability": ["paid"]
     },
@@ -108,14 +124,6 @@ MODELS = {
         },
         "tier_availability": ["paid"]
     },   
-    "gemini/gemini-2.5-pro": {
-        "aliases": ["gemini-2.5-pro"],
-        "pricing": {
-            "input_cost_per_million_tokens": 0.50,  # TODO: Update with actual Gemini pricing if different
-            "output_cost_per_million_tokens": 1.50
-        },
-        "tier_availability": ["paid"]
-    },
 }
 
 # Derived structures (auto-generated from MODELS)
@@ -179,4 +187,7 @@ MODEL_ACCESS_TIERS = {
     "tier_50_400": PAID_TIER_MODELS,
     "tier_125_800": PAID_TIER_MODELS,
     "tier_200_1000": PAID_TIER_MODELS,
+    "tier_25_170_yearly_commitment": PAID_TIER_MODELS,
+    "tier_6_42_yearly_commitment": PAID_TIER_MODELS,
+    "tier_12_84_yearly_commitment": PAID_TIER_MODELS,
 }

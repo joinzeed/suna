@@ -43,7 +43,7 @@ class XMLToolParser:
     )
     
     INVOKE_PATTERN = re.compile(
-        r'<invoke\s+name=["\']([^"\']+)["\'](?:\s*/\s*>|(>(.*?)</invoke>))',
+        r'<invoke\s+name=["\']([^"\']+)["\']>(.*?)</invoke>',
         re.DOTALL | re.IGNORECASE
     )
     
@@ -75,17 +75,8 @@ class XMLToolParser:
             # Find all invoke blocks within this function_calls block
             invoke_matches = self.INVOKE_PATTERN.findall(fc_content)
             
-            for match in invoke_matches:
+            for function_name, invoke_content in invoke_matches:
                 try:
-                    # Handle both self-closing and regular invoke tags
-                    if len(match) == 3:
-                        function_name = match[0]
-                        # If match[1] is empty, it's self-closing; if not, match[2] has content
-                        invoke_content = match[2] if match[1] else ""
-                    else:
-                        # Fallback for old format
-                        function_name, invoke_content = match[0], match[1] if len(match) > 1 else ""
-                    
                     tool_call = self._parse_invoke_block(
                         function_name, 
                         invoke_content,
@@ -124,20 +115,13 @@ class XMLToolParser:
             parameters[param_name] = parsed_value
             parsing_details["raw_parameters"][param_name] = param_value
         
-        # Extract the raw XML for this specific invoke (handle both self-closing and regular)
+        # Extract the raw XML for this specific invoke
         invoke_pattern = re.compile(
-            rf'<invoke\s+name=["\']{re.escape(function_name)}["\'](?:\s*/\s*>|>.*?</invoke>)',
+            rf'<invoke\s+name=["\']{re.escape(function_name)}["\']>.*?</invoke>',
             re.DOTALL | re.IGNORECASE
         )
         raw_xml_match = invoke_pattern.search(full_block)
-        if raw_xml_match:
-            raw_xml = raw_xml_match.group(0)
-        else:
-            # Fallback - check if no parameters were found, might be self-closing
-            if not parameters:
-                raw_xml = f'<invoke name="{function_name}" />'
-            else:
-                raw_xml = f"<invoke name=\"{function_name}\">...</invoke>"
+        raw_xml = raw_xml_match.group(0) if raw_xml_match else f"<invoke name=\"{function_name}\">...</invoke>"
         
         return XMLToolCall(
             function_name=function_name,
