@@ -2,7 +2,7 @@
 LLM API interface for making calls to various language models.
 
 This module provides a unified interface for making API calls to different LLM providers
-(OpenAI, Anthropic, Google Gemini, Groq, xAI, etc.) using LiteLLM. It includes support for:
+(OpenAI, Anthropic, Groq, xAI, etc.) using LiteLLM. It includes support for:
 - Streaming responses
 - Tool calls and function calling
 - Retry logic with exponential backoff
@@ -21,7 +21,9 @@ from utils.logger import logger
 from utils.config import config
 
 # litellm.set_verbose=True
-litellm.modify_params=True
+# Let LiteLLM auto-adjust params and drop unsupported ones (e.g., GPT-5 temperature!=1)
+litellm.modify_params = True
+litellm.drop_params = True
 
 # Constants
 MAX_RETRIES = 2
@@ -129,7 +131,6 @@ def prepare_params(
         "stream": stream,
     }
 
-    # API key selection logic
     if api_key:
         params["api_key"] = api_key
     elif model_name.startswith("gemini/gemini") and config.GOOGLE_API_KEY:
@@ -153,7 +154,9 @@ def prepare_params(
             logger.debug(f"Skipping max_tokens for Claude 3.7 model: {model_name}")
             # Do not add any max_tokens parameter for Claude 3.7
         else:
-            param_name = "max_completion_tokens" if 'o1' in model_name else "max_tokens"
+            is_openai_o_series = 'o1' in model_name
+            is_openai_gpt5 = 'gpt-5' in model_name
+            param_name = "max_completion_tokens" if (is_openai_o_series or is_openai_gpt5) else "max_tokens"
             params[param_name] = max_tokens
 
     # Add tools if provided
@@ -208,6 +211,10 @@ def prepare_params(
     # Apply Anthropic prompt caching (minimal implementation)
     # Check model name *after* potential modifications (like adding bedrock/ prefix)
     effective_model_name = params.get("model", model_name) # Use model from params if set, else original
+
+    # OpenAI GPT-5: drop unsupported temperature param (only default 1 allowed)
+    if "gpt-5" in effective_model_name and "temperature" in params and params["temperature"] != 1:
+        params.pop("temperature", None)
     if "claude" in effective_model_name.lower() or "anthropic" in effective_model_name.lower():
         messages = params["messages"] # Direct reference, modification affects params
 
@@ -244,7 +251,7 @@ def prepare_params(
     is_xai = "xai" in effective_model_name.lower() or model_name.startswith("xai/")
     is_kimi_k2 = "kimi-k2" in effective_model_name.lower() or model_name.startswith("moonshotai/kimi-k2")
     is_gemini = "gemini" in effective_model_name.lower() or model_name.startswith("google/gemini")
-    
+
     if is_kimi_k2:
         params["provider"] = {
             "order": ["together/fp8", "novita/fp8", "baseten/fp8", "moonshotai", "groq"]
@@ -272,6 +279,7 @@ def prepare_params(
         # Set provider for official Google Gemini API
         params["provider"] = "google"
 
+
     return params
 
 async def make_llm_api_call(
@@ -295,7 +303,7 @@ async def make_llm_api_call(
 
     Args:
         messages: List of message dictionaries for the conversation
-        model_name: Name of the model to use (e.g., "gpt-4", "claude-3", "openrouter/openai/gpt-4", "bedrock/anthropic.claude-3-sonnet-20240229-v1:0", "google/gemini-pro")
+        model_name: Name of the model to use (e.g., "gpt-4", "claude-3", "openrouter/openai/gpt-4", "bedrock/anthropic.claude-3-sonnet-20240229-v1:0")
         response_format: Desired format for the response
         temperature: Sampling temperature (0-1)
         max_tokens: Maximum tokens in the response
@@ -319,7 +327,6 @@ async def make_llm_api_call(
     # debug <timestamp>.json messages
     logger.info(f"Making LLM API call to model: {model_name} (Thinking: {enable_thinking}, Effort: {reasoning_effort})")
     logger.info(f"📡 API Call: Using model {model_name}")
-    print("99999999999999")
     params = prepare_params(
         messages=messages,
         model_name=model_name,
@@ -336,8 +343,7 @@ async def make_llm_api_call(
         enable_thinking=enable_thinking,
         reasoning_effort=reasoning_effort
     )
-    print("121212121", params)
-    print("jjdkdjkad")
+    logger.info(f"API request parameters: {json.dumps(params, indent=2)}")
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
@@ -345,8 +351,6 @@ async def make_llm_api_call(
             # logger.debug(f"API request parameters: {json.dumps(params, indent=2)}")
 
             response = await litellm.acompletion(**params)
-            print('popopopopo')
-            print("999999", response)
             logger.debug(f"Successfully received API response from {model_name}")
             # logger.debug(f"Response: {response}")
             return response

@@ -68,12 +68,12 @@ def normalize_path(path: str) -> str:
 
 async def verify_sandbox_access(client, sandbox_id: str, user_id: Optional[str] = None):
     """
-    Verify that a user has access to a specific sandbox based on direct ownership.
+    Verify that a user has access to a specific sandbox based on account membership.
     
     Args:
         client: The Supabase client
         sandbox_id: The sandbox ID to check access for
-        user_id: The Clerk user ID to check permissions for. Can be None for public resource access.
+        user_id: The user ID to check permissions for. Can be None for public resource access.
         
     Returns:
         dict: Project data containing sandbox information
@@ -362,6 +362,7 @@ async def ensure_project_sandbox_active(
         if not (account_id and account_id == user_id):
             logger.error(f"User {user_id} not authorized to access project {project_id}")
             raise HTTPException(status_code=403, detail="Not authorized to access this project")
+
     
     try:
         # Get sandbox ID from project data

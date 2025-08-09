@@ -1,4 +1,3 @@
-import json
 from typing import Optional, Dict, Any, List
 from agentpress.tool import ToolResult, openapi_schema, usage_example
 from agentpress.thread_manager import ThreadManager
@@ -13,13 +12,16 @@ class WorkflowTool(AgentBuilderBaseTool):
 
     async def _get_available_tools_for_agent(self) -> List[str]:
         try:
+            logger.info(f"[WORKFLOW] Getting available tools for agent: {self.agent_id}")
             client = await self.db.client
 
             agent_result = await client.table('agents').select('*').eq('agent_id', self.agent_id).execute()
             if not agent_result.data:
+                logger.warning(f"[WORKFLOW] No agent found for agent_id: {self.agent_id}")
                 return []
             
             agent_data = agent_result.data[0]
+            logger.info(f"[WORKFLOW] Agent found: {agent_data.get('name', 'Unknown')}, version_id: {agent_data.get('current_version_id', 'None')}")
             version_data = None
             if agent_data.get('current_version_id'):
                 try:
@@ -36,6 +38,7 @@ class WorkflowTool(AgentBuilderBaseTool):
                     logger.warning(f"Failed to get version data for workflow tool: {e}")
             
             agent_config = extract_agent_config(agent_data, version_data)
+            logger.info(f"[WORKFLOW] Extracted agent config, agentpress_tools: {agent_config.get('agentpress_tools', {})}")
             
             available_tools = []
             
@@ -49,13 +52,16 @@ class WorkflowTool(AgentBuilderBaseTool):
                 'web_search_tool': ['web_search'],
                 'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
                 'finviz_tool': ['run_screener', 'get_available_filters'],
-                'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_preliminary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
+                'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_prelimilary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
+                'official_market_news_tool': ['get_nordic_rns_placement_list', 'get_lseg_rns_placement_list', 'get_euronext_rns_placement_list'],
                 'wait_tool': ['wait']
             }
             
             agentpress_tools = agent_config.get('agentpress_tools', {})
             for tool_key, tool_names in tool_mapping.items():
-                if agentpress_tools.get(tool_key, {}).get('enabled', False):
+                tool_enabled = agentpress_tools.get(tool_key, {}).get('enabled', False)
+                if tool_enabled:
+                    logger.info(f"[WORKFLOW] Tool {tool_key} is enabled, adding functions: {tool_names}")
                     available_tools.extend(tool_names)
             
             configured_mcps = agent_config.get('configured_mcps', [])
@@ -75,10 +81,11 @@ class WorkflowTool(AgentBuilderBaseTool):
                     seen.add(tool)
                     unique_tools.append(tool)
             
+            logger.info(f"[WORKFLOW] Total available tools for agent: {len(unique_tools)} - {unique_tools}")
             return unique_tools
             
         except Exception as e:
-            logger.error(f"Error getting available tools for agent {self.agent_id}: {e}")
+            logger.error(f"[WORKFLOW] Error getting available tools for agent {self.agent_id}: {e}")
             return []
 
     def _validate_tool_steps(self, steps: List[Dict[str, Any]], available_tools: List[str]) -> List[str]:
@@ -221,6 +228,10 @@ class WorkflowTool(AgentBuilderBaseTool):
         validate_tools: bool = True
     ) -> ToolResult:
         try:
+            logger.info(f"[WORKFLOW] Creating workflow '{name}' for agent: {self.agent_id}")
+            logger.info(f"[WORKFLOW] Steps: {steps}")
+            logger.info(f"[WORKFLOW] Validate tools: {validate_tools}")
+            
             client = await self.db.client
             
             if not isinstance(steps, list) or len(steps) == 0:
@@ -228,8 +239,10 @@ class WorkflowTool(AgentBuilderBaseTool):
             
             if validate_tools:
                 available_tools = await self._get_available_tools_for_agent()
+                logger.info(f"[WORKFLOW] Available tools count: {len(available_tools)}")
                 validation_errors = self._validate_tool_steps(steps, available_tools)
                 if validation_errors:
+                    logger.error(f"[WORKFLOW] Tool validation failed: {validation_errors}")
                     return self.fail_response(f"Tool validation failed:\n" + "\n".join(validation_errors))
             
             steps_json = self._convert_steps_to_json(steps)
@@ -507,7 +520,7 @@ class WorkflowTool(AgentBuilderBaseTool):
             
             workflow_name = workflow_result.data[0]['name']
             
-            result = await client.table('agent_workflows').delete().eq('id', workflow_id).execute()
+            _ = await client.table('agent_workflows').delete().eq('id', workflow_id).execute()
             
             return self.success_response({
                 "message": f"Workflow '{workflow_name}' deleted successfully",

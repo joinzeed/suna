@@ -84,6 +84,22 @@ MODELS = {
         },
         "tier_availability": ["paid"]
     },
+    "openai/gpt-5": {
+        "aliases": ["gpt-5"],
+        "pricing": {
+            "input_cost_per_million_tokens": 1.25,
+            "output_cost_per_million_tokens": 10.00
+        },
+        "tier_availability": ["paid"]
+    },
+    "openai/gpt-5-mini": {
+        "aliases": ["gpt-5-mini"],
+        "pricing": {
+            "input_cost_per_million_tokens": 0.25,
+            "output_cost_per_million_tokens": 2.00
+        },
+        "tier_availability": ["paid"]
+    },
     "openai/gpt-4.1-mini": {
         "aliases": ["gpt-4.1-mini"],
         "pricing": {
@@ -108,14 +124,6 @@ MODELS = {
         },
         "tier_availability": ["paid"]
     },   
-    "gemini/gemini-2.5-pro": {
-        "aliases": ["gemini-2.5-pro"],
-        "pricing": {
-            "input_cost_per_million_tokens": 0.50,  # TODO: Update with actual Gemini pricing if different
-            "output_cost_per_million_tokens": 1.50
-        },
-        "tier_availability": ["paid"]
-    },
 }
 
 # Derived structures (auto-generated from MODELS)
@@ -171,12 +179,15 @@ def _generate_model_structures():
 FREE_TIER_MODELS, PAID_TIER_MODELS, MODEL_NAME_ALIASES, HARDCODED_MODEL_PRICES = _generate_model_structures()
 
 MODEL_ACCESS_TIERS = {
-    "free": list(MODELS.keys()),  # Make ALL models available for free
-    "tier_2_20": list(MODELS.keys()),
-    "tier_6_50": list(MODELS.keys()),
-    "tier_12_100": list(MODELS.keys()),
-    "tier_25_200": list(MODELS.keys()),
-    "tier_50_400": list(MODELS.keys()),
-    "tier_125_800": list(MODELS.keys()),
-    "tier_200_1000": list(MODELS.keys()),
+    "free": FREE_TIER_MODELS,
+    "tier_2_20": PAID_TIER_MODELS,
+    "tier_6_50": PAID_TIER_MODELS,
+    "tier_12_100": PAID_TIER_MODELS,
+    "tier_25_200": PAID_TIER_MODELS,
+    "tier_50_400": PAID_TIER_MODELS,
+    "tier_125_800": PAID_TIER_MODELS,
+    "tier_200_1000": PAID_TIER_MODELS,
+    "tier_25_170_yearly_commitment": PAID_TIER_MODELS,
+    "tier_6_42_yearly_commitment": PAID_TIER_MODELS,
+    "tier_12_84_yearly_commitment": PAID_TIER_MODELS,
 }

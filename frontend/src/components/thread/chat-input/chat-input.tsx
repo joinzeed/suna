@@ -22,12 +22,13 @@ import { Brain, Zap, Workflow, Database, ArrowDown } from 'lucide-react';
 import { FaGoogle, FaDiscord } from 'react-icons/fa';
 import { SiNotion } from 'react-icons/si';
 import { AgentConfigModal } from '@/components/agents/agent-config-modal';
-import { PipedreamRegistry } from '@/components/agents/pipedream/pipedream-registry';
+import { IntegrationsRegistry } from '@/components/agents/integrations-registry';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useSubscriptionWithStreaming } from '@/hooks/react-query/subscriptions/use-subscriptions';
 import { isLocalMode } from '@/lib/config';
 import { BillingModal } from '@/components/billing/billing-modal';
 import { useRouter } from 'next/navigation';
+import posthog from 'posthog-js';
 
 export interface ChatInputHandles {
   getPendingFiles: () => File[];
@@ -281,6 +282,8 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
         baseModelName = getActualModelId(selectedModel.replace(/-thinking$/, ''));
         thinkingEnabled = true;
       }
+
+      posthog.capture("task_prompt_submitted", { message });
 
       onSubmit(message, {
         model_name: baseModelName,
@@ -536,11 +539,11 @@ export const ChatInput = forwardRef<ChatInputHandles, ChatInputProps>(
             initialTab={configModalTab}
           />
           <Dialog open={registryDialogOpen} onOpenChange={setRegistryDialogOpen}>
-            <DialogContent className="p-0 max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="p-0 max-w-6xl h-[90vh] overflow-hidden">
               <DialogHeader className="sr-only">
                 <DialogTitle>Integrations</DialogTitle>
               </DialogHeader>
-              <PipedreamRegistry
+              <IntegrationsRegistry
                 showAgentSelector={true}
                 selectedAgentId={selectedAgentId}
                 onAgentChange={onAgentSelect}

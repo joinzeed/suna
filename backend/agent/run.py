@@ -38,6 +38,8 @@ from agent.tools.wait_tool import WaitTool
 from agent.tools.official_market_news_tool import SandboxOfficialMarketNewsTool
 from agent.tools.pdf_convert_tool import SandboxPDFConvertTool
 from agent.tools.supabase_tools import SupabaseTools
+from agent.tools.send_email_tool import SendEmailTool
+from agent.tools.market_chameleon_screener import SandboxOptionsScreenerTool
 
 load_dotenv()
 
@@ -81,12 +83,14 @@ class ToolManager:
         self.thread_manager.add_tool(SandboxImageEditTool, project_id=self.project_id, thread_id=self.thread_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(SandboxFinvizTool, project_id=self.project_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(SandboxOfficialMarketNewsTool, project_id=self.project_id, thread_manager=self.thread_manager)
+        self.thread_manager.add_tool(SandboxOptionsScreenerTool, project_id=self.project_id, thread_manager=self.thread_manager)
         self.thread_manager.add_tool(TaskListTool, project_id=self.project_id, thread_manager=self.thread_manager, thread_id=self.thread_id)
         if config.RAPID_API_KEY:
             self.thread_manager.add_tool(DataProvidersTool)
         self.thread_manager.add_tool(CampaignManagementTool)
         self.thread_manager.add_tool(WaitTool)
         self.thread_manager.add_tool(SupabaseTools)
+        self.thread_manager.add_tool(SendEmailTool)
     
     def register_agent_builder_tools(self, agent_id: str):
         from agent.tools.agent_builder_tools.agent_config_tool import AgentConfigTool
@@ -145,6 +149,14 @@ class ToolManager:
             self.thread_manager.add_tool(SandboxPDFConvertTool, project_id=self.project_id, thread_id=self.thread_id, thread_manager=self.thread_manager)
         if safe_tool_check('template_fetch_tool'):
             self.thread_manager.add_tool(SupabaseTools)
+        if safe_tool_check('options_screener_tool'):
+            self.thread_manager.add_tool(SandboxOptionsScreenerTool, project_id=self.project_id, thread_manager=self.thread_manager)
+        if safe_tool_check('campaign_management_tool'):
+            self.thread_manager.add_tool(CampaignManagementTool)
+        if safe_tool_check('wait_tool'):
+            self.thread_manager.add_tool(WaitTool)
+        if safe_tool_check('send_email_tool'):
+            self.thread_manager.add_tool(SendEmailTool)
 
 
 class MCPManager:
@@ -221,7 +233,7 @@ class PromptManager:
                                   mcp_wrapper_instance: Optional[MCPToolWrapper],
                                   user_context: Optional[dict] = None) -> dict:
         
-        if "gemini" in model_name.lower() or "gemini-2.5-flash" in model_name.lower():
+        if "gemini-2.5-flash" in model_name.lower() or "gemini-2.5-pro" in model_name.lower():
             default_system_content = get_gemini_system_prompt()
         else:
             default_system_content = get_system_prompt()
@@ -419,8 +431,9 @@ class AgentRunner:
 
         project_data = project.data[0]
         sandbox_info = project_data.get('sandbox', {})
+        # Sandbox is optional - tools that require it will fail if it's not available
         if not sandbox_info.get('id'):
-            raise ValueError(f"No sandbox found for project {self.config.project_id}")
+            logger.warning(f"No sandbox found for project {self.config.project_id}. Sandbox-dependent tools will be unavailable.")
     
     async def setup_tools(self):
         tool_manager = ToolManager(self.thread_manager, self.config.project_id, self.config.thread_id)
@@ -655,7 +668,7 @@ async def run_agent(
     thread_manager: Optional[ThreadManager] = None,
     native_max_auto_continues: int = 25,
     max_iterations: int = 100,
-    model_name: str = "anthropic/claude-sonnet-4-20250514",
+    model_name: str = "gemini/gemini-2.5-pro",
     enable_thinking: Optional[bool] = False,
     reasoning_effort: Optional[str] = 'low',
     enable_context_manager: bool = True,

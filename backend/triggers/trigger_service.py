@@ -21,6 +21,10 @@ class TriggerEvent:
     trigger_type: TriggerType
     raw_data: Dict[str, Any]
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    workflow_id: Optional[str] = None
+    event_type: Optional[str] = None
+    event_data: Optional[Dict[str, Any]] = None
+    config: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -180,7 +184,10 @@ class TriggerService:
             trigger_id=trigger_id,
             agent_id=trigger.agent_id,
             trigger_type=trigger.trigger_type,
-            raw_data=raw_data
+            raw_data=raw_data,
+            workflow_id=raw_data.get('workflow_id'),
+            event_type=raw_data.get('execution_type', 'agent'),
+            config=trigger.config
         )
         
         from .provider_service import get_provider_service

@@ -30,10 +30,15 @@ class ExecutionService:
             logger.info(f"Executing trigger for agent {agent_id}: workflow={trigger_result.should_execute_workflow}, agent={trigger_result.should_execute_agent}")
             
             if trigger_result.should_execute_workflow:
+                # Ensure workflow_input is a dict
+                workflow_input = trigger_result.workflow_input
+                if not isinstance(workflow_input, dict):
+                    workflow_input = {}
+                
                 return await self._workflow_executor.execute_workflow(
                     agent_id=agent_id,
                     workflow_id=trigger_result.workflow_id,
-                    workflow_input=trigger_result.workflow_input or {},
+                    workflow_input=workflow_input,
                     trigger_result=trigger_result,
                     trigger_event=trigger_event
                 )
@@ -64,30 +69,71 @@ class SessionManager:
         trigger_event: TriggerEvent
     ) -> Tuple[str, str]:
         client = await self._db.client
-        
-        project_id = str(uuid.uuid4())
-        thread_id = str(uuid.uuid4())
         account_id = agent_config.get('account_id')
+        thread_id = str(uuid.uuid4())
         
-        placeholder_name = f"Trigger: {agent_config.get('name', 'Agent')} - {trigger_event.trigger_id[:8]}"
+        # Check if trigger has shared_project enabled in its config
+        # For scheduled triggers (identified by cron_expression in config), always use shared project
+        if 'cron_expression' in trigger_event.config:
+            use_shared_project = True
+        else:
+            use_shared_project = trigger_event.config.get('use_shared_project', False)
         
-        await client.table('projects').insert({
-            "project_id": project_id,
-            "account_id": account_id,
-            "name": placeholder_name,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }).execute()
+        if use_shared_project:
+            # Look for existing shared project for this agent
+            shared_project_name = f"Scheduled Agent: {agent_config.get('name', 'Agent')}"
+            existing_projects = await client.table('projects').select('project_id, sandbox').eq(
+                'account_id', account_id
+            ).eq('name', shared_project_name).execute()
+            
+            if existing_projects.data and existing_projects.data[0].get('sandbox'):
+                # Use existing shared project
+                project_id = existing_projects.data[0]['project_id']
+                logger.info(f"Using existing shared project: {project_id} for agent {agent_id}")
+            else:
+                # Create new shared project that will be reused
+                project_id = str(uuid.uuid4())
+                await client.table('projects').insert({
+                    "project_id": project_id,
+                    "account_id": account_id,
+                    "name": shared_project_name,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "metadata": {
+                        "shared_project": True,
+                        "agent_id": agent_id
+                    }
+                }).execute()
+                
+                await self._create_sandbox_for_project(project_id)
+                logger.info(f"Created new shared project: {project_id} for agent {agent_id}")
+        else:
+            # Original behavior: create new project for each execution
+            project_id = str(uuid.uuid4())
+            placeholder_name = f"Trigger: {agent_config.get('name', 'Agent')} - {trigger_event.trigger_id[:8]}"
+            
+            await client.table('projects').insert({
+                "project_id": project_id,
+                "account_id": account_id,
+                "name": placeholder_name,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }).execute()
+            
+            await self._create_sandbox_for_project(project_id)
         
-        await self._create_sandbox_for_project(project_id)
-        
+        # Always create a new thread
         await client.table('threads').insert({
             "thread_id": thread_id,
             "project_id": project_id,
             "account_id": account_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "metadata": {
+                "trigger_execution": True,
+                "trigger_id": trigger_event.trigger_id,
+                "shared_project": use_shared_project
+            }
         }).execute()
         
-        logger.info(f"Created agent session: project={project_id}, thread={thread_id}")
+        logger.info(f"Created agent session: project={project_id}, thread={thread_id}, shared={use_shared_project}")
         return thread_id, project_id
     
     async def create_workflow_session(
@@ -98,18 +144,31 @@ class SessionManager:
     ) -> Tuple[str, str]:
         client = await self._db.client
         
-        project_id = str(uuid.uuid4())
+        # Check if a project already exists for this specific workflow ID
+        # First check threads table for previous workflow executions
+        existing_thread = await client.table('threads').select('project_id').eq(
+            'account_id', account_id
+        ).contains('metadata', {'workflow_id': workflow_id}).limit(1).execute()
+        
+        if existing_thread.data:
+            # Reuse existing project for this workflow
+            project_id = existing_thread.data[0]['project_id']
+            logger.info(f"Reusing existing project {project_id} for workflow {workflow_id} ({workflow_name})")
+        else:
+            # Create new project for first run
+            project_id = str(uuid.uuid4())
+            await client.table('projects').insert({
+                "project_id": project_id,
+                "account_id": account_id,
+                "name": f"Workflow: {workflow_name}",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }).execute()
+            
+            await self._create_sandbox_for_project(project_id)
+            logger.info(f"Created new project {project_id} for workflow {workflow_id} ({workflow_name})")
+        
+        # Always create a new thread for each execution
         thread_id = str(uuid.uuid4())
-        
-        await client.table('projects').insert({
-            "project_id": project_id,
-            "account_id": account_id,
-            "name": f"Workflow: {workflow_name}",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }).execute()
-        
-        await self._create_sandbox_for_project(project_id)
-        
         await client.table('threads').insert({
             "thread_id": thread_id,
             "project_id": project_id,
@@ -122,7 +181,7 @@ class SessionManager:
             }
         }).execute()
         
-        logger.info(f"Created workflow session: project={project_id}, thread={thread_id}")
+        logger.info(f"Workflow session: project={project_id}, thread={thread_id}")
         return thread_id, project_id
     
     async def _create_sandbox_for_project(self, project_id: str) -> None:
@@ -284,7 +343,7 @@ class AgentExecutor:
         trigger_variables: Dict[str, Any]
     ) -> str:
         client = await self._db.client
-        model_name = "anthropic/claude-sonnet-4-20250514"
+        model_name = "gemini/gemini-2.5-pro"
         
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,
@@ -393,6 +452,16 @@ class WorkflowExecutor:
             raise ValueError(f"Workflow {workflow_id} is not active")
         
         steps_json = workflow_config.get('steps', [])
+        
+        # Debug logging and type checking
+        logger.info(f"Workflow config keys: {list(workflow_config.keys())}")
+        logger.info(f"Steps data type: {type(steps_json)}, length: {len(steps_json) if isinstance(steps_json, (list, str)) else 'N/A'}")
+        
+        # Ensure steps_json is a list
+        if not isinstance(steps_json, list):
+            logger.warning(f"Steps is not a list, got {type(steps_json)}. Converting to empty list.")
+            steps_json = []
+        
         return workflow_config, steps_json
     
     async def _get_agent_data(self, agent_id: str) -> Tuple[Dict[str, Any], str]:
@@ -413,10 +482,13 @@ class WorkflowExecutor:
             if not active_version:
                 raise ValueError(f"No active version found for agent {agent_id}")
             
+            # Debug logging
+            logger.info(f"Active version for agent {agent_id}: version_id={active_version.version_id}, system_prompt type={type(active_version.system_prompt)}, value={repr(active_version.system_prompt)[:100]}")
+            
             agent_config = {
                 'agent_id': agent_id,
                 'name': agent_data.get('name', 'Unknown Agent'),
-                'system_prompt': active_version.system_prompt,
+                'system_prompt': active_version.system_prompt or "You are a helpful assistant.",
                 'configured_mcps': active_version.configured_mcps,
                 'custom_mcps': active_version.custom_mcps,
                 'agentpress_tools': active_version.agentpress_tools if isinstance(active_version.agentpress_tools, dict) else {},
@@ -445,7 +517,8 @@ class WorkflowExecutor:
         )
         
         enhanced_config = agent_config.copy()
-        enhanced_config['system_prompt'] = f"""{agent_config['system_prompt']}
+        base_prompt = agent_config.get('system_prompt') or "You are a helpful assistant."
+        enhanced_config['system_prompt'] = f"""{base_prompt}
 
 --- WORKFLOW EXECUTION MODE ---
 {workflow_prompt}"""
@@ -456,28 +529,51 @@ class WorkflowExecutor:
         available_tools = []
         agentpress_tools = agent_config.get('agentpress_tools', {})
         
+        configured_mcps = agent_config.get('configured_mcps', [])
+        custom_mcps = agent_config.get('custom_mcps', [])
+        
+        # Ensure agentpress_tools is a dictionary, not a boolean
+        if not isinstance(agentpress_tools, dict):
+            agentpress_tools = {}
+        
         tool_mapping = {
             'sb_shell_tool': ['execute_command'],
-            'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file'],
+            'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file', 'copy_supabase_field_to_file'],
             'sb_browser_tool': ['browser_navigate_to', 'browser_take_screenshot'],
             'sb_vision_tool': ['see_image'],
             'sb_deploy_tool': ['deploy'],
             'sb_expose_tool': ['expose_port'],
             'web_search_tool': ['web_search'],
-            'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call']
+            'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
+            'finviz_tool': ['run_screener', 'get_available_filters'],
+            'options_screener_tool': ['screen_stocks_with_options'],
+            'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_prelimilary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
+            'official_market_news_tool': ['get_nordic_rns_placement_list', 'get_lseg_rns_placement_list', 'get_euronext_rns_placement_list'],
+            'wait_tool': ['wait']
         }
         
         for tool_key, tool_names in tool_mapping.items():
-            if agentpress_tools.get(tool_key, {}).get('enabled', False):
-                available_tools.extend(tool_names)
+            tool_config = agentpress_tools.get(tool_key, {})
+            # Handle both boolean values (legacy) and dict values (new format)
+            if isinstance(tool_config, bool):
+                if tool_config:  # If True, tool is enabled
+                    available_tools.extend(tool_names)
+            elif isinstance(tool_config, dict):
+                if tool_config.get('enabled', False):
+                    available_tools.extend(tool_names)
+            else:
+                logger.warning(f"Unexpected tool config type for {tool_key}: {type(tool_config)} = {tool_config}")
         
         all_mcps = []
-        if agent_config.get('configured_mcps'):
-            all_mcps.extend(agent_config['configured_mcps'])
-        if agent_config.get('custom_mcps'):
-            all_mcps.extend(agent_config['custom_mcps'])
+        if configured_mcps:
+            all_mcps.extend(configured_mcps)
+        if custom_mcps:
+            all_mcps.extend(custom_mcps)
         
         for mcp in all_mcps:
+            # Ensure mcp is a dictionary, not a boolean or other type
+            if not isinstance(mcp, dict):
+                continue
             enabled_tools_list = mcp.get('enabledTools', [])
             available_tools.extend(enabled_tools_list)
         
@@ -523,7 +619,7 @@ class WorkflowExecutor:
         agent_config: Dict[str, Any]
     ) -> str:
         client = await self._db.client
-        model_name = config.MODEL_TO_USE or "anthropic/claude-sonnet-4-20250514"
+        model_name = config.MODEL_TO_USE or "gemini/gemini-2.5-pro"
         
         agent_run = await client.table('agent_runs').insert({
             "thread_id": thread_id,
@@ -565,54 +661,5 @@ class WorkflowExecutor:
             logger.warning(f"Failed to register workflow run in Redis: {e}")
 
 
-class WorkflowPromptBuilder:
-    def get_available_tools(self, agent_config: Dict[str, Any]) -> list:
-        available_tools = []
-        agentpress_tools = agent_config.get('agentpress_tools', {})
-        tool_mapping = {
-                'sb_shell_tool': ['execute_command'],
-                'sb_files_tool': ['create_file', 'str_replace', 'full_file_rewrite', 'delete_file', 'copy_supabase_field_to_file'],
-                'sb_browser_tool': ['browser_navigate_to', 'browser_take_screenshot'],
-                'sb_vision_tool': ['see_image'],
-                'sb_deploy_tool': ['deploy'],
-                'sb_expose_tool': ['expose_port'],
-                'web_search_tool': ['web_search'],
-                'data_providers_tool': ['get_data_provider_endpoints', 'execute_data_provider_call'],
-                'finviz_tool': ['run_screener', 'get_available_filters'],
-                'campaign_management_tool': ['campaign_build', 'campaign_remove', 'send_preliminary_job', 'send_deep_research_job', 'get_job_status', 'build_batch', 'remove_batch', 'get_batch_status', 'send_html_generation_job'],
-                'wait_tool': ['wait']
-            }
-        
-        for tool_key, tool_names in tool_mapping.items():
-            if agentpress_tools.get(tool_key, {}).get('enabled', False):
-                available_tools.extend(tool_names)
-        
-        all_mcps = []
-        if agent_config.get('configured_mcps'):
-            all_mcps.extend(agent_config['configured_mcps'])
-        if agent_config.get('custom_mcps'):
-            all_mcps.extend(agent_config['custom_mcps'])
-        
-        for mcp in all_mcps:
-            enabled_tools_list = mcp.get('enabledTools', [])
-            available_tools.extend(enabled_tools_list)
-        
-        return available_tools
-    
-    def build_workflow_system_prompt(
-        self,
-        workflow: dict,
-        steps_json: list,
-        input_data: dict = None,
-        available_tools: list = None
-    ) -> str:
-        return format_workflow_for_llm(
-            workflow_config=workflow,
-            steps=steps_json,
-            input_data=input_data,
-            available_tools=available_tools
-        )
-    
- 
 def get_execution_service(db_connection: DBConnection) -> ExecutionService:
     return ExecutionService(db_connection) 
